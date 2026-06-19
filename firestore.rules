@@ -2,21 +2,36 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Events: Publicly readable, write restricted to admins (or no one for now)
+    // Helper function to check user role
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Events: Publicly readable, write restricted to authenticated organizers/admins
     match /events/{eventId} {
       allow read: if true;
-      allow write: if false; // Lock writes to events for now
+      allow create: if request.auth != null && getUserData().role in ['organizer', 'admin'];
+      allow update, delete: if request.auth != null && (resource.data.organizerId == request.auth.uid || getUserData().role == 'admin');
     }
     
-    // Tickets: Users can read/create their own tickets
+    // Tickets: Users can read/create their own. Organizers of the associated event can read/update (for scanner check-in)
     match /tickets/{ticketId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.userId || 
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid
+      );
+      
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      allow update: if false; // No updating tickets for now
-      allow delete: if false; // No deleting tickets for now
+      
+      allow update: if request.auth != null && (
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid ||
+        getUserData().role == 'admin'
+      );
+      
+      allow delete: if false; // Deletion is disabled for logs
     }
     
-    // Users: Users can read/write their own profile
+    // Users: Users can read/write their own profile data
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }

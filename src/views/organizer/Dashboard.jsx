@@ -1,26 +1,89 @@
-import React from "react";
-import { Plus, BarChart3, Scan, Calendar, Settings } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
+import { Plus, BarChart3, Scan, Calendar, ArrowUpRight, BadgeAlert, Sparkles, HelpCircle } from "lucide-react";
+import CreateEventModal from "../../components/organizer/CreateEventModal";
+import GateScanner from "../../components/organizer/GateScanner";
 
 const Dashboard = () => {
-  const { profile } = useAuth();
+  const { user } = useAuth();
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+
+  // Calculated Metrics
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalSold, setTotalSold] = useState(0);
+
+  const fetchOrganizerData = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const eventsRef = collection(db, "events");
+      const q = query(eventsRef, where("organizerId", "==", user.uid));
+      const querySnapshot = await getDocs(q);
+
+      const fetchedEvents = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Sort events by creation date (newest first)
+      fetchedEvents.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+
+      setEvents(fetchedEvents);
+
+      // Aggregate stats
+      let revenueSum = 0;
+      let soldSum = 0;
+      
+      fetchedEvents.forEach((ev) => {
+        const sold = ev.soldCount || 0;
+        const price = ev.price || 0;
+        revenueSum += sold * price;
+        soldSum += sold;
+      });
+
+      setTotalRevenue(revenueSum);
+      setTotalSold(soldSum);
+    } catch (err) {
+      console.error("Error fetching organizer metrics:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchOrganizerData();
+  }, [fetchOrganizerData]);
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-[#2A2A2A] font-sans pb-16">
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-8 md:pt-12">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
           <div>
-            <span className="text-xs uppercase tracking-wider text-[#EA7963] font-semibold">Organizer Space</span>
-            <h1 className="text-4xl font-bold font-display text-[#2A2A2A] tracking-tight mt-1">
-              Events Dashboard
+            <div className="flex items-center gap-1.5 text-[#EA7963] mb-1">
+              <Sparkles size={14} className="text-[#358597]" />
+              <span className="text-xs uppercase tracking-wider font-semibold">Organizer Management Hub</span>
+            </div>
+            <h1 className="text-4xl font-bold font-display tracking-tight text-[#2A2A2A]">
+              Platform Operations
             </h1>
             <p className="text-neutral-500 text-sm font-light mt-1">
-              Track event ticket sales, scan admissions, and publish new programs.
+              Monitor active ticket sales, configure Waitlists, and scan visitor entry passes.
             </p>
           </div>
 
-          <button className="h-12 px-6 rounded-full bg-[#EA7963] text-white hover:bg-[#D96853] transition-all duration-300 font-display font-medium tracking-wide shadow-lg flex items-center justify-center gap-2 self-start md:self-auto">
+          <button 
+            onClick={() => setCreateModalOpen(true)}
+            className="h-12 px-6 rounded-full bg-[#EA7963] text-white hover:bg-[#D96853] transition-all duration-300 font-display font-medium tracking-wide shadow-md flex items-center justify-center gap-2 self-start sm:self-auto shrink-0"
+          >
             <Plus size={18} />
             Create Event
           </button>
@@ -28,58 +91,161 @@ const Dashboard = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {/* Card 1 */}
-          <div className="bg-white p-6 rounded-3xl border border-neutral-100 shadow-xl shadow-neutral-100/50">
-            <div className="flex justify-between items-center text-neutral-400 mb-4">
-              <span className="text-sm font-light">Total Revenue</span>
-              <BarChart3 size={20} className="text-[#358597]" />
+          {/* Revenue Card */}
+          <div className="bg-white p-6 rounded-3xl border border-neutral-100/80 shadow-xl shadow-neutral-100/50 flex flex-col justify-between min-h-[140px]">
+            <div className="flex justify-between items-center text-neutral-400">
+              <span className="text-xs font-semibold uppercase tracking-wider">Total Revenue</span>
+              <BarChart3 size={18} className="text-[#358597]" />
             </div>
-            <h2 className="text-4xl font-bold font-display text-[#2A2A2A] tracking-tight">$0.00</h2>
-            <p className="text-xs text-neutral-400 font-light mt-1">Across 0 active events</p>
+            <div>
+              <h2 className="text-4xl font-bold font-display text-[#2A2A2A] tracking-tight">
+                ${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </h2>
+              <span className="text-[10px] text-neutral-400 font-light mt-1 flex items-center gap-0.5">
+                <ArrowUpRight size={10} className="text-emerald-500" /> Live payout commission included
+              </span>
+            </div>
           </div>
 
-          {/* Card 2 */}
-          <div className="bg-white p-6 rounded-3xl border border-neutral-100 shadow-xl shadow-neutral-100/50">
-            <div className="flex justify-between items-center text-neutral-400 mb-4">
-              <span className="text-sm font-light">Tickets Sold</span>
-              <Calendar size={20} className="text-[#EA7963]" />
+          {/* Tickets Sold Card */}
+          <div className="bg-white p-6 rounded-3xl border border-neutral-100/80 shadow-xl shadow-neutral-100/50 flex flex-col justify-between min-h-[140px]">
+            <div className="flex justify-between items-center text-neutral-400">
+              <span className="text-xs font-semibold uppercase tracking-wider">Passes Issued</span>
+              <Calendar size={18} className="text-[#EA7963]" />
             </div>
-            <h2 className="text-4xl font-bold font-display text-[#2A2A2A] tracking-tight">0</h2>
-            <p className="text-xs text-neutral-400 font-light mt-1">Total reservations</p>
+            <div>
+              <h2 className="text-4xl font-bold font-display text-[#2A2A2A] tracking-tight">
+                {totalSold}
+              </h2>
+              <span className="text-[10px] text-neutral-400 font-light mt-1">Across all published listings</span>
+            </div>
           </div>
 
-          {/* Card 3 */}
-          <div className="bg-white p-6 rounded-3xl border border-neutral-100 shadow-xl shadow-neutral-100/50">
-            <div className="flex justify-between items-center text-neutral-400 mb-4">
-              <span className="text-sm font-light">Admissions Scanned</span>
-              <Scan size={20} className="text-emerald-500" />
+          {/* Active Listings Card */}
+          <div className="bg-white p-6 rounded-3xl border border-neutral-100/80 shadow-xl shadow-neutral-100/50 flex flex-col justify-between min-h-[140px]">
+            <div className="flex justify-between items-center text-neutral-400">
+              <span className="text-xs font-semibold uppercase tracking-wider">Active Campaigns</span>
+              <Scan size={18} className="text-emerald-500" />
             </div>
-            <h2 className="text-4xl font-bold font-display text-[#2A2A2A] tracking-tight">0%</h2>
-            <p className="text-xs text-neutral-400 font-light mt-1">Check-in completion rate</p>
+            <div>
+              <h2 className="text-4xl font-bold font-display text-[#2A2A2A] tracking-tight">
+                {events.length}
+              </h2>
+              <span className="text-[10px] text-neutral-400 font-light mt-1">Ready for ticket scanning</span>
+            </div>
           </div>
         </div>
 
-        {/* Main section list */}
-        <div className="bg-white rounded-[2rem] border border-neutral-100 shadow-xl shadow-neutral-100/50 p-8">
-          <div className="flex items-center justify-between border-b border-neutral-100 pb-4 mb-6">
-            <h3 className="font-display font-semibold text-lg">My Active Events</h3>
-            <button className="text-xs text-neutral-400 hover:text-[#2A2A2A] flex items-center gap-1">
-              <Settings size={12} /> Manage
-            </button>
+        {/* Organizer Workspace Layout Grid */}
+        <div className="grid lg:grid-cols-3 gap-8 items-start">
+          
+          {/* Active Events List Container (2/3 width on wide screens) */}
+          <div className="lg:col-span-2 bg-white rounded-[2rem] border border-neutral-100 shadow-xl shadow-neutral-100/50 p-6 md:p-8">
+            <h3 className="font-display font-semibold text-lg border-b border-neutral-100 pb-4 mb-6 text-left">
+              My Active Listings
+            </h3>
+
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#358597]"></div>
+                <p className="mt-4 text-xs text-neutral-400 font-light">Loading events...</p>
+              </div>
+            ) : events.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-14 h-14 rounded-full bg-neutral-50 flex items-center justify-center border border-neutral-100 mb-3 text-neutral-300">
+                  <Calendar size={22} />
+                </div>
+                <h4 className="font-display font-semibold text-base text-[#2A2A2A]">No events listed yet</h4>
+                <p className="text-neutral-400 text-xs font-light max-w-xs mt-1">
+                  Click the "Create Event" button to set up your first cultural gathering or trail.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {events.map((ev) => {
+                  const percentSold = ev.inventory > 0 ? Math.min(100, Math.round(((ev.soldCount || 0) / ev.inventory) * 100)) : 0;
+                  return (
+                    <div 
+                      key={ev.id} 
+                      className="p-5 rounded-2xl border border-neutral-100 hover:border-neutral-200/60 bg-[#FDFDFD] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all"
+                    >
+                      {/* Left: Metadata & Image */}
+                      <div className="flex gap-4 items-center">
+                        <img 
+                          src={ev.image} 
+                          alt={ev.name} 
+                          className="w-16 h-16 rounded-xl object-cover border border-neutral-200/50 shrink-0" 
+                        />
+                        <div className="text-left">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-display font-bold text-base text-[#2A2A2A] leading-tight">
+                              {ev.name}
+                            </h4>
+                            {ev.hypeMode && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 font-semibold uppercase tracking-wider">
+                                Waitlist
+                              </span>
+                            )}
+                            {ev.isFree && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 font-semibold uppercase tracking-wider">
+                                Free
+                              </span>
+                            )}
+                          </div>
+                          
+                          <p className="text-xs text-neutral-400 font-light">
+                            {new Date(ev.date).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                          </p>
+                          <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-500 border border-neutral-200/40 inline-block mt-1 font-sans">
+                            {ev.category}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Right: Registration Metrics & Capacity bar */}
+                      <div className="w-full md:w-48 text-left md:text-right shrink-0">
+                        <div className="flex justify-between text-xs text-neutral-500 mb-1 font-sans">
+                          <span>{ev.soldCount || 0} / {ev.inventory} Sold</span>
+                          <span className="font-semibold text-neutral-700">{percentSold}%</span>
+                        </div>
+                        {/* Progress Bar */}
+                        <div className="w-full bg-neutral-100 h-2 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              ev.hypeMode ? "bg-[#EA7963]" : "bg-[#358597]"
+                            }`} 
+                            style={{ width: `${percentSold}%` }}
+                          ></div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-2.5">
+                          <span className="text-[10px] font-mono text-neutral-400">ID: {ev.id.substring(0, 8)}...</span>
+                          <span className="text-sm font-bold text-[#2A2A2A]">
+                            {ev.isFree ? "Free" : `$${ev.price.toFixed(2)}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Empty state list */}
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-12 h-12 rounded-full bg-neutral-50 flex items-center justify-center border border-neutral-100 mb-3 text-neutral-400">
-              <Calendar size={20} />
-            </div>
-            <h4 className="font-display font-semibold text-base text-[#2A2A2A]">No events listed yet</h4>
-            <p className="text-neutral-400 text-xs font-light max-w-xs mt-1">
-              Publish your first event trail or entry pass to start hosting attendees.
-            </p>
+          {/* Interactive Gate Scanner Panel (1/3 width) */}
+          <div className="lg:col-span-1">
+            <GateScanner onCheckInSuccess={fetchOrganizerData} />
           </div>
+
         </div>
       </div>
+
+      {/* Create Event Dialog Modal */}
+      <CreateEventModal 
+        isOpen={createModalOpen} 
+        onClose={() => setCreateModalOpen(false)} 
+        onEventCreated={fetchOrganizerData}
+      />
     </div>
   );
 };
