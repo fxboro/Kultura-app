@@ -1,12 +1,104 @@
+import React, { useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import Navbar from "./components/layout/Navbar";
+import AuthModal from "./components/auth/AuthModal";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+
+// Views
+import Discover from "./views/visitor/Discover";
+import Wallet from "./views/visitor/Wallet";
+import OrganizerDashboard from "./views/organizer/Dashboard";
+import AdminDashboard from "./views/admin/Dashboard";
+
+const AppContent = () => {
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("login") === "true") {
+      setAuthModalOpen(true);
+      // Remove query param to clean URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("login");
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  const handleDismissAlert = () => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("unauthorized");
+    setSearchParams(newParams, { replace: true });
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FDFDFD] text-[#2A2A2A] font-sans flex flex-col">
+      <Navbar onOpenAuth={() => setAuthModalOpen(true)} />
+      
+      {/* Unauthorized Redirection Alert Banner */}
+      {searchParams.get("unauthorized") === "true" && (
+        <div className="bg-rose-50 border-b border-rose-100 px-6 py-3 text-rose-600 text-center text-xs font-semibold flex items-center justify-center gap-4 transition-all duration-300">
+          <span>You do not have access rights to the requested workspace view.</span>
+          <button 
+            onClick={handleDismissAlert} 
+            className="underline hover:text-rose-800 transition-colors uppercase tracking-wider text-[10px]"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Primary Route Switcher */}
+      <main className="flex-grow">
+        <Routes>
+          <Route path="/" element={<Discover />} />
+          <Route 
+            path="/wallet" 
+            element={
+              <ProtectedRoute allowedRoles={["visitor"]}>
+                <Wallet />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/organizer" 
+            element={
+              <ProtectedRoute allowedRoles={["organizer"]}>
+                <OrganizerDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          {/* Fallback back to discover feed */}
+          <Route path="*" element={<Discover />} />
+        </Routes>
+      </main>
+
+      {/* Global Portal modal */}
+      <AuthModal 
+        isOpen={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)} 
+        defaultMode="login"
+      />
+    </div>
+  );
+};
+
 function App() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-neutral-900 text-white p-6 font-sans">
-      <h1 className="text-5xl font-bold font-display mb-4 tracking-tight">Kultura</h1>
-      <p className="text-neutral-400 text-lg">
-        Premium Cultural Tourism & Ticketing Platform. Phase 1 Scaffold Successful.
-      </p>
-    </div>
-  )
+    <AuthProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;
