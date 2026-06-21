@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { collection, query, getDocs, onSnapshot, addDoc, where } from "firebase/firestore";
 import { db } from "../../lib/firebase";
@@ -139,7 +139,7 @@ const Discover = () => {
   };
 
   // Click card button action handler
-  const handleOpenBooking = (event) => {
+  const handleOpenBooking = useCallback((event) => {
     if (!user) {
       // Trigger App.jsx login modal via query param
       setSearchParams({ login: "true" });
@@ -147,7 +147,7 @@ const Discover = () => {
       setSelectedEvent(event);
       setBookingOpen(true);
     }
-  };
+  }, [user, setSearchParams]);
 
   // Seeder helper to populate database with sample data
   const seedSampleEvents = async () => {

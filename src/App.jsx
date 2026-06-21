@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/layout/Navbar";
 import AuthModal from "./components/auth/AuthModal";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
-// Views
-import Discover from "./views/visitor/Discover";
-import Wallet from "./views/visitor/Wallet";
-import OrganizerDashboard from "./views/organizer/Dashboard";
-import Admin from "./views/admin/Admin";
+// Views (Lazy Loaded for performance & code splitting)
+const Discover = lazy(() => import("./views/visitor/Discover"));
+const Wallet = lazy(() => import("./views/visitor/Wallet"));
+const OrganizerDashboard = lazy(() => import("./views/organizer/Dashboard"));
+const Admin = lazy(() => import("./views/admin/Admin"));
 
 const AppContent = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -50,35 +50,42 @@ const AppContent = () => {
 
       {/* Primary Route Switcher */}
       <main className="flex-grow">
-        <Routes>
-          <Route path="/" element={<Discover />} />
-          <Route 
-            path="/wallet" 
-            element={
-              <ProtectedRoute allowedRoles={["visitor"]}>
-                <Wallet />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/organizer" 
-            element={
-              <ProtectedRoute allowedRoles={["organizer"]}>
-                <OrganizerDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin" 
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <Admin />
-              </ProtectedRoute>
-            } 
-          />
-          {/* Fallback back to discover feed */}
-          <Route path="*" element={<Discover />} />
-        </Routes>
+        <Suspense fallback={
+          <div className="flex flex-col items-center justify-center min-h-[50vh] bg-[#FDFDFD]">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#358597]"></div>
+            <p className="mt-4 font-sans text-xs text-neutral-400 font-light">Loading view...</p>
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<Discover />} />
+            <Route 
+              path="/wallet" 
+              element={
+                <ProtectedRoute allowedRoles={["visitor"]}>
+                  <Wallet />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/organizer" 
+              element={
+                <ProtectedRoute allowedRoles={["organizer"]}>
+                  <OrganizerDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin" 
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <Admin />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Fallback back to discover feed */}
+            <Route path="*" element={<Discover />} />
+          </Routes>
+        </Suspense>
       </main>
 
       {/* Global Portal modal */}

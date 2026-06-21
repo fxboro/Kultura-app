@@ -1,7 +1,7 @@
-import React from "react";
+import React, { memo } from "react";
 import { Calendar, MapPin, Tag, Sparkles, Flame, CheckCircle } from "lucide-react";
 
-const EventCard = ({ event, onBook }) => {
+const EventCard = memo(({ event, onBook }) => {
   const { name, date, image, category, vibe, price, inventory, soldCount, isFree, hypeMode } = event;
 
   const capacity = inventory || 100;
@@ -137,6 +137,6 @@ const EventCard = ({ event, onBook }) => {
       </div>
     </div>
   );
-};
+});
 
 export default EventCard;

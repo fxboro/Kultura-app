@@ -182,6 +182,7 @@ const Dashboard = () => {
                           src={ev.image} 
                           alt={ev.name} 
                           className="w-16 h-16 rounded-xl object-cover border border-neutral-200/50 shrink-0" 
+                          loading="lazy"
                         />
                         <div className="text-left">
                           <div className="flex items-center gap-2 mb-1">

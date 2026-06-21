@@ -444,6 +444,7 @@ const Admin = () => {
                               src={ev.image} 
                               alt={ev.name} 
                               className="w-10 h-10 rounded-lg object-cover border border-neutral-100"
+                              loading="lazy"
                             />
                             <div className="flex-grow min-w-0 text-left">
                               <h4 className="font-semibold text-xs text-[#2A2A2A] truncate leading-tight">{ev.name}</h4>

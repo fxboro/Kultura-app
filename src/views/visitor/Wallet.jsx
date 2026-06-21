@@ -223,6 +223,7 @@ const Wallet = () => {
                       src={t.eventImage || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=200&auto=format&fit=crop"} 
                       alt={t.eventName} 
                       className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-neutral-200/45 shrink-0 select-none align-middle"
+                      loading="lazy"
                     />
                     
                     <div className="flex flex-col justify-between">
