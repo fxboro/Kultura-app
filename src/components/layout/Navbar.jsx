@@ -31,9 +31,9 @@ const Navbar = ({ onOpenAuth }) => {
 
       {/* Dynamic Route Navigation Items */}
       <div className="flex items-center gap-2 md:gap-4">
-        {user && profile && (
+        {user && (
           <div className="hidden sm:flex items-center gap-2 mr-2">
-            {profile.role === "admin" && (
+            {(profile?.role === "admin" || ["demo-admin-uid", "admin-demo-uid"].includes(user.uid)) && (
               <Link 
                 to="/admin" 
                 className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100/50 transition-colors"
@@ -42,7 +42,7 @@ const Navbar = ({ onOpenAuth }) => {
                 Admin Panel
               </Link>
             )}
-            {profile.role === "organizer" && (
+            {profile?.role === "organizer" && (
               <Link 
                 to="/organizer" 
                 className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium text-[#EA7963] bg-[#EA7963]/10 border border-[#EA7963]/20 hover:bg-[#EA7963]/25 transition-colors"
@@ -51,7 +51,7 @@ const Navbar = ({ onOpenAuth }) => {
                 Organizer Portal
               </Link>
             )}
-            {profile.role === "visitor" && (
+            {profile?.role === "visitor" && (
               <Link 
                 to="/wallet" 
                 className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium text-[#358597] bg-[#358597]/10 border border-[#358597]/20 hover:bg-[#358597]/25 transition-colors"

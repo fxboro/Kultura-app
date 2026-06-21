@@ -9,7 +9,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Discover from "./views/visitor/Discover";
 import Wallet from "./views/visitor/Wallet";
 import OrganizerDashboard from "./views/organizer/Dashboard";
-import AdminDashboard from "./views/admin/Dashboard";
+import Admin from "./views/admin/Admin";
 
 const AppContent = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -72,7 +72,7 @@ const AppContent = () => {
             path="/admin" 
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
-                <AdminDashboard />
+                <Admin />
               </ProtectedRoute>
             } 
           />

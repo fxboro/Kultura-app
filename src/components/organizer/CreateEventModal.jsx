@@ -10,6 +10,7 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
   const [date, setDate] = useState("");
   const [image, setImage] = useState("");
   const [category, setCategory] = useState("Music");
+  const [vibe, setVibe] = useState("Chill");
   const [price, setPrice] = useState("");
   const [inventory, setInventory] = useState("");
   
@@ -58,6 +59,7 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
         date,
         image: image || "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=600&auto=format&fit=crop",
         category,
+        vibe,
         price: parsedPrice,
         inventory: parsedInventory,
         organizerId: user.uid,
@@ -75,6 +77,7 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
       setDate("");
       setImage("");
       setCategory("Music");
+      setVibe("Chill");
       setPrice("");
       setInventory("");
       setIsFree(false);
@@ -160,6 +163,22 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
                   <option value="Art">Art</option>
                   <option value="Theater">Theater</option>
                   <option value="Tourism">Tourism</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Vibe</label>
+                <select
+                  value={vibe}
+                  onChange={(e) => setVibe(e.target.value)}
+                  className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] transition-all font-light"
+                >
+                  <option value="Chill">Chill</option>
+                  <option value="Energetic">Energetic</option>
+                  <option value="Family Friendly">Family Friendly</option>
+                  <option value="Local Secret">Local Secret</option>
                 </select>
               </div>
             </div>

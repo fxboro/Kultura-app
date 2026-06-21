@@ -14,11 +14,12 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && (resource.data.organizerId == request.auth.uid || getUserData().role == 'admin');
     }
     
-    // Tickets: Users can read/create their own. Organizers of the associated event can read/update (for scanner check-in)
+    // Tickets: Users can read/create their own. Organizers of the associated event can read/update (for scanner check-in). Admins can read all.
     match /tickets/{ticketId} {
       allow read: if request.auth != null && (
         request.auth.uid == resource.data.userId || 
-        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid ||
+        getUserData().role == 'admin'
       );
       
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
@@ -28,12 +29,19 @@ service cloud.firestore {
         getUserData().role == 'admin'
       );
       
-      allow delete: if false; // Deletion is disabled for logs
+      allow delete: if request.auth != null && getUserData().role == 'admin';
     }
     
-    // Users: Users can read/write their own profile data
+    // Users: Users can read/write their own profile data. Admins can read all profiles.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && (request.auth.uid == userId || getUserData().role == 'admin');
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Trails: Publicly readable, write restricted to admins.
+    match /trails/{trailId} {
+      allow read: if true;
+      allow write: if request.auth != null && getUserData().role == 'admin';
     }
   }
 }
