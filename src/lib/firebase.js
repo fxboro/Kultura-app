@@ -5,12 +5,12 @@ import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 // Your web app's Firebase configuration.
 // Replace placeholders with your own Firebase project credentials.
 const firebaseConfig = {
-  apiKey: "demo-api-key-for-emulator", // Needs a non-empty string so Firebase SDK initialized correctly
-  authDomain: "kultura-demo.firebaseapp.com",
-  projectId: "kultura-app-demo",
-  storageBucket: "kultura-demo.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:1234567890"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-api-key-for-emulator",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "kultura-demo.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "kultura-app-demo",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "kultura-demo.appspot.com",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1234567890",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1234567890:web:1234567890"
 };
 
 // Initialize Firebase

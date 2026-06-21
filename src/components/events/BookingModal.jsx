@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { doc, collection, addDoc, updateDoc, serverTimestamp, increment } from "firebase/firestore";
+import { doc, collection, runTransaction, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { X, Sparkles, AlertCircle, CreditCard, Sparkle, CheckCircle2, Calendar, MapPin, User, Flame } from "lucide-react";
@@ -85,39 +85,63 @@ const BookingModal = ({ isOpen, onClose, event, onSuccess }) => {
         await new Promise((resolve) => setTimeout(resolve, 800));
       }
 
-      // Generate Ticket Document(s)
       const ticketDocs = [];
-      for (let i = 0; i < quantity; i++) {
-        const ticketCode = generate6DigitCode();
-        const ticketData = {
-          eventId: event.id,
-          eventName: name,
-          eventDate: date,
-          eventImage: image,
-          eventCategory: category,
-          userId: user.uid,
-          userEmail: user.email,
-          ticketCode,
-          price: ticketPrice,
-          status: hypeMode ? "waitlist" : "valid",
-          purchaseDate: new Date(),
-        };
-
-        const docRef = await addDoc(collection(db, "tickets"), ticketData);
-        ticketDocs.push({ id: docRef.id, code: ticketCode });
-      }
-
-      // Update Event Inventory & Aggregations
       const eventDocRef = doc(db, "events", event.id);
-      if (hypeMode) {
-        await updateDoc(eventDocRef, {
-          waitlistCount: increment(quantity)
-        });
-      } else {
-        await updateDoc(eventDocRef, {
-          soldCount: increment(quantity)
-        });
-      }
+
+      // Run transactional update to ensure stock availability at the exact moment of purchase
+      await runTransaction(db, async (transaction) => {
+        // Get fresh state of the event
+        const eventSnap = await transaction.get(eventDocRef);
+        if (!eventSnap.exists()) {
+          throw new Error("This event no longer exists.");
+        }
+
+        const freshEventData = eventSnap.data();
+        const freshSoldCount = freshEventData.soldCount || 0;
+        const freshWaitlistCount = freshEventData.waitlistCount || 0;
+        const freshInventory = freshEventData.inventory || 0;
+
+        // Verify inventory again inside the transaction (database-level check)
+        if (!freshEventData.hypeMode) {
+          const freshRemainingInventory = freshInventory - freshSoldCount;
+          if (freshRemainingInventory < quantity) {
+            throw new Error("Not enough tickets remaining for this event.");
+          }
+        }
+
+        // Generate tickets and set them in the transaction
+        for (let i = 0; i < quantity; i++) {
+          const ticketCode = generate6DigitCode();
+          const ticketRef = doc(collection(db, "tickets"));
+          const ticketData = {
+            eventId: event.id,
+            eventName: name,
+            eventDate: date,
+            eventImage: image,
+            eventCategory: category,
+            userId: user.uid,
+            userEmail: user.email,
+            ticketCode,
+            price: ticketPrice,
+            status: freshEventData.hypeMode ? "waitlist" : "valid",
+            purchaseDate: new Date(),
+          };
+
+          transaction.set(ticketRef, ticketData);
+          ticketDocs.push({ id: ticketRef.id, code: ticketCode });
+        }
+
+        // Update the event document with new counts
+        if (freshEventData.hypeMode) {
+          transaction.update(eventDocRef, {
+            waitlistCount: freshWaitlistCount + quantity
+          });
+        } else {
+          transaction.update(eventDocRef, {
+            soldCount: freshSoldCount + quantity
+          });
+        }
+      });
 
       setGeneratedTickets(ticketDocs);
       setStatus("success");
