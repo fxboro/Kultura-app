@@ -19,6 +19,7 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
   const [hypeMode, setHypeMode] = useState(false);
   
   const [error, setError] = useState(null);
+  const [validationErrors, setValidationErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -27,6 +28,7 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
     setIsFree(checked);
     if (checked) {
       setPrice("0");
+      setValidationErrors(prev => ({ ...prev, price: "" }));
     } else {
       setPrice("");
     }
@@ -35,6 +37,7 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setValidationErrors({});
     setLoading(true);
 
     if (!user) {
@@ -43,17 +46,50 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
       return;
     }
 
-    try {
-      const parsedPrice = isFree ? 0 : parseFloat(price);
-      const parsedInventory = parseInt(inventory, 10);
-
-      if (isNaN(parsedPrice) || parsedPrice < 0) {
-        throw new Error("Please enter a valid price.");
+    // Inline Validation
+    const errors = {};
+    if (!name.trim()) {
+      errors.name = "Event title is required.";
+    }
+    if (!date) {
+      errors.date = "Event date and time is required.";
+    } else {
+      const selectedDate = new Date(date);
+      const now = new Date();
+      if (selectedDate < now) {
+        errors.date = "Event date cannot be in the past.";
       }
+    }
+
+    let parsedPrice = 0;
+    if (!isFree) {
+      if (price === "") {
+        errors.price = "Price is required.";
+      } else {
+        parsedPrice = parseFloat(price);
+        if (isNaN(parsedPrice) || parsedPrice < 0) {
+          errors.price = "Price cannot be negative.";
+        }
+      }
+    }
+
+    let parsedInventory = 0;
+    if (inventory === "") {
+      errors.inventory = "Capacity is required.";
+    } else {
+      parsedInventory = parseInt(inventory, 10);
       if (isNaN(parsedInventory) || parsedInventory <= 0) {
-        throw new Error("Please enter a valid event capacity/inventory.");
+        errors.inventory = "Capacity must be a positive integer.";
       }
+    }
 
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      setLoading(false);
+      return;
+    }
+
+    try {
       const eventData = {
         name,
         date,
@@ -82,6 +118,7 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
       setInventory("");
       setIsFree(false);
       setHypeMode(false);
+      setValidationErrors({});
       
       if (onEventCreated) onEventCreated();
       onClose();
@@ -132,12 +169,26 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
               <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Event Title</label>
               <input
                 type="text"
-                required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (validationErrors.name) {
+                    setValidationErrors(prev => ({ ...prev, name: "" }));
+                  }
+                }}
                 placeholder="e.g. Symphony Under the Stars"
-                className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light"
+                className={`w-full h-12 px-4 rounded-2xl border bg-neutral-50/50 focus:outline-none focus:ring-2 text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light ${
+                  validationErrors.name 
+                    ? "border-rose-300 focus:ring-rose-500/25 focus:border-rose-500" 
+                    : "border-neutral-200/80 focus:ring-[#EA7963]/25 focus:border-[#EA7963]"
+                }`}
               />
+              {validationErrors.name && (
+                <p className="text-rose-500 text-xs mt-1.5 pl-1 font-sans flex items-center gap-1.5">
+                  <AlertCircle size={12} className="shrink-0 text-rose-500" />
+                  {validationErrors.name}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -145,11 +196,25 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
                 <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Date & Time</label>
                 <input
                   type="datetime-local"
-                  required
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] transition-all font-light"
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    if (validationErrors.date) {
+                      setValidationErrors(prev => ({ ...prev, date: "" }));
+                    }
+                  }}
+                  className={`w-full h-12 px-4 rounded-2xl border bg-neutral-50/50 focus:outline-none focus:ring-2 text-sm text-[#2A2A2A] transition-all font-light ${
+                    validationErrors.date 
+                      ? "border-rose-300 focus:ring-rose-500/25 focus:border-rose-500" 
+                      : "border-neutral-200/80 focus:ring-[#EA7963]/25 focus:border-[#EA7963]"
+                  }`}
                 />
+                {validationErrors.date && (
+                  <p className="text-rose-500 text-xs mt-1.5 pl-1 font-sans flex items-center gap-1.5">
+                    <AlertCircle size={12} className="shrink-0 text-rose-500" />
+                    {validationErrors.date}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -200,25 +265,53 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
                 <input
                   type="number"
                   step="0.01"
-                  required
                   disabled={isFree}
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  onChange={(e) => {
+                    setPrice(e.target.value);
+                    if (validationErrors.price) {
+                      setValidationErrors(prev => ({ ...prev, price: "" }));
+                    }
+                  }}
                   placeholder={isFree ? "Free" : "29.99"}
-                  className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] disabled:bg-neutral-100 disabled:text-neutral-400 placeholder-neutral-300 transition-all font-light"
+                  className={`w-full h-12 px-4 rounded-2xl border bg-neutral-50/50 focus:outline-none focus:ring-2 text-sm text-[#2A2A2A] disabled:bg-neutral-100 disabled:text-neutral-400 placeholder-neutral-300 transition-all font-light ${
+                    validationErrors.price 
+                      ? "border-rose-300 focus:ring-rose-500/25 focus:border-rose-500" 
+                      : "border-neutral-200/80 focus:ring-[#EA7963]/25 focus:border-[#EA7963]"
+                  }`}
                 />
+                {validationErrors.price && (
+                  <p className="text-rose-500 text-xs mt-1.5 pl-1 font-sans flex items-center gap-1.5">
+                    <AlertCircle size={12} className="shrink-0 text-rose-500" />
+                    {validationErrors.price}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Tickets Capacity</label>
                 <input
                   type="number"
-                  required
                   value={inventory}
-                  onChange={(e) => setInventory(e.target.value)}
+                  onChange={(e) => {
+                    setInventory(e.target.value);
+                    if (validationErrors.inventory) {
+                      setValidationErrors(prev => ({ ...prev, inventory: "" }));
+                    }
+                  }}
                   placeholder="150"
-                  className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light"
+                  className={`w-full h-12 px-4 rounded-2xl border bg-neutral-50/50 focus:outline-none focus:ring-2 text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light ${
+                    validationErrors.inventory 
+                      ? "border-rose-300 focus:ring-rose-500/25 focus:border-rose-500" 
+                      : "border-neutral-200/80 focus:ring-[#EA7963]/25 focus:border-[#EA7963]"
+                  }`}
                 />
+                {validationErrors.inventory && (
+                  <p className="text-rose-500 text-xs mt-1.5 pl-1 font-sans flex items-center gap-1.5">
+                    <AlertCircle size={12} className="shrink-0 text-rose-500" />
+                    {validationErrors.inventory}
+                  </p>
+                )}
               </div>
             </div>
 

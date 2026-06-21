@@ -151,14 +151,21 @@ const Dashboard = () => {
                 <p className="mt-4 text-xs text-neutral-400 font-light">Loading events...</p>
               </div>
             ) : events.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-14 h-14 rounded-full bg-neutral-50 flex items-center justify-center border border-neutral-100 mb-3 text-neutral-300">
-                  <Calendar size={22} />
+              <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed border-neutral-200 rounded-[2rem] bg-neutral-50/20 text-center">
+                <div className="w-16 h-16 rounded-full bg-[#EA7963]/10 flex items-center justify-center text-[#EA7963] mb-4 shadow-sm border border-[#EA7963]/20">
+                  <Calendar size={26} />
                 </div>
-                <h4 className="font-display font-semibold text-base text-[#2A2A2A]">No events listed yet</h4>
-                <p className="text-neutral-400 text-xs font-light max-w-xs mt-1">
-                  Click the "Create Event" button to set up your first cultural gathering or trail.
+                <h4 className="font-display font-bold text-lg text-[#2A2A2A] tracking-tight">No Events Published Yet</h4>
+                <p className="text-neutral-400 text-xs font-light max-w-xs mt-1.5 leading-relaxed">
+                  Start building your community! Publish your first event or city trail challenge to invite visitors.
                 </p>
+                <button
+                  onClick={() => setCreateModalOpen(true)}
+                  className="mt-6 h-10 px-5 rounded-full bg-[#EA7963] text-white hover:bg-[#D96853] transition-all text-xs font-semibold tracking-wider uppercase shadow-md flex items-center gap-1.5"
+                >
+                  <Plus size={14} className="shrink-0" />
+                  Create First Event
+                </button>
               </div>
             ) : (
               <div className="space-y-6">

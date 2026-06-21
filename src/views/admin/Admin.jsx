@@ -11,7 +11,7 @@ const Admin = () => {
 
   // Route protection override check
   const HARDCODED_ADMIN_UIDS = ["demo-admin-uid", "admin-demo-uid"];
-  const isAdmin = user && (HARDCODED_ADMIN_UIDs.includes(user.uid) || profile?.role === "admin");
+  const isAdmin = user && (HARDCODED_ADMIN_UIDS.includes(user.uid) || profile?.role === "admin");
 
   // Platform Metrics States
   const [tickets, setTickets] = useState([]);

@@ -150,29 +150,47 @@ const Wallet = () => {
           </div>
         ) : filteredTickets.length === 0 ? (
           /* Empty Wallet View */
-          <div className="flex flex-col items-center justify-center py-20 border border-dashed border-neutral-200 rounded-[2.5rem] bg-neutral-50/50 text-center">
-            <div className="w-14 h-14 rounded-full bg-neutral-50 flex items-center justify-center border border-neutral-100 mb-4 text-neutral-300">
-              <Ticket size={22} />
+          <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed border-neutral-200 rounded-[2.5rem] bg-neutral-50/20 text-center">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center border mb-4 shadow-sm ${
+              activeTab === "active" 
+                ? "bg-[#358597]/10 border-[#358597]/20 text-[#358597]" 
+                : activeTab === "waitlist"
+                  ? "bg-[#EA7963]/10 border-[#EA7963]/20 text-[#EA7963]"
+                  : "bg-emerald-50 border-emerald-100 text-emerald-600"
+            }`}>
+              {activeTab === "active" ? (
+                <Ticket size={26} />
+              ) : activeTab === "waitlist" ? (
+                <Flame size={26} />
+              ) : (
+                <History size={26} />
+              )}
             </div>
             
-            <h4 className="font-display font-semibold text-lg text-[#2A2A2A]">
-              {activeTab === "active" ? "No active passes" : activeTab === "waitlist" ? "No pre-booking waitlists" : "Empty stamped passport"}
+            <h4 className="font-display font-bold text-lg text-[#2A2A2A] tracking-tight">
+              {activeTab === "active" ? "Your Wallet is Empty" : activeTab === "waitlist" ? "No Active Waitlists" : "No Stamped History Yet"}
             </h4>
             
-            <p className="text-neutral-400 text-xs font-light max-w-xs mt-1.5 leading-relaxed">
+            <p className="text-neutral-400 text-xs font-light max-w-sm mt-2 leading-relaxed">
               {activeTab === "active" 
-                ? "Explore trails happening around Berlin and secure your entry passes."
+                ? "You don't have any active passes. Browse the curated cultural trails around the city to book your next experience."
                 : activeTab === "waitlist"
-                  ? "Join upcoming Hype Mode launches to secure 24h pre-booking access."
-                  : "Stamps will appear here automatically when checked-in at event entry gates."}
+                  ? "You aren't on any pre-booking waitlists. Join waitlists for upcoming hot events to lock in early ticket access."
+                  : "Collect stamps by attending events! Present your digital ticket at the gate scanner to stamp your cultural passport."}
             </p>
             
             <button
               onClick={() => navigate("/")}
-              className="mt-6 h-11 px-6 rounded-full bg-[#358597] text-white hover:bg-[#2C6E7D] transition-colors font-display text-xs font-semibold tracking-wider uppercase shadow-md flex items-center gap-1.5"
+              className={`mt-6 h-10 px-5 rounded-full text-white transition-all text-xs font-semibold tracking-wider uppercase shadow-md flex items-center gap-1.5 ${
+                activeTab === "active" 
+                  ? "bg-[#358597] hover:bg-[#2C6E7D]" 
+                  : activeTab === "waitlist"
+                    ? "bg-[#EA7963] hover:bg-[#D96853]"
+                    : "bg-emerald-600 hover:bg-emerald-700"
+              }`}
             >
-              Discover Events
-              <ArrowUpRight size={14} />
+              Explore Discover Feed
+              <ArrowUpRight size={14} className="shrink-0" />
             </button>
           </div>
         ) : (
