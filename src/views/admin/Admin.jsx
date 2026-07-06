@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
+import { collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
-import { ShieldAlert, DollarSign, Users, Award, Sparkles, Plus, Trash2, Check, Briefcase, Calendar, Info } from "lucide-react";
+import { ShieldAlert, DollarSign, Users, Award, Sparkles, Plus, Trash2, Check, Briefcase, Calendar, Info, Percent, RotateCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Admin = () => {
@@ -32,6 +32,15 @@ const Admin = () => {
   const [formError, setFormError] = useState(null);
   const [formSuccess, setFormSuccess] = useState(null);
   const [creating, setCreating] = useState(false);
+
+  // Commission Control States
+  const [globalRate, setGlobalRate] = useState(2.5); // Display as percentage
+  const [globalRateInput, setGlobalRateInput] = useState("2.5");
+  const [globalRateSaving, setGlobalRateSaving] = useState(false);
+  const [globalRateSuccess, setGlobalRateSuccess] = useState(null);
+  const [organizerFees, setOrganizerFees] = useState({}); // { [uid]: { commissionRate, ... } }
+  const [orgFeeInputs, setOrgFeeInputs] = useState({}); // { [uid]: "3.5" }
+  const [orgFeeSaving, setOrgFeeSaving] = useState({}); // { [uid]: true/false }
 
   // Theme presets
   const themeOptions = [
@@ -98,11 +107,32 @@ const Admin = () => {
       setLoading(false);
     });
 
+    // 5. Listen to Global Platform Fee
+    const unsubscribeGlobalFee = onSnapshot(doc(db, "platformSettings", "fees"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const ratePercent = (data.globalCommissionRate || 0.025) * 100;
+        setGlobalRate(ratePercent);
+        setGlobalRateInput(ratePercent.toString());
+      }
+    }, (err) => console.error("Admin Error (Global Fee):", err));
+
+    // 6. Listen to Per-Organizer Fee Overrides
+    const unsubscribeOrgFees = onSnapshot(collection(db, "organizerFees"), (snapshot) => {
+      const fees = {};
+      snapshot.docs.forEach(d => {
+        fees[d.id] = d.data();
+      });
+      setOrganizerFees(fees);
+    }, (err) => console.error("Admin Error (Organizer Fees):", err));
+
     return () => {
       unsubscribeTickets();
       unsubscribeUsers();
       unsubscribeEvents();
       unsubscribeTrails();
+      unsubscribeGlobalFee();
+      unsubscribeOrgFees();
     };
   }, [authLoading, isAdmin]);
 
@@ -171,6 +201,67 @@ const Admin = () => {
       await deleteDoc(doc(db, "trails", trailId));
     } catch (err) {
       console.error("Error deleting trail:", err);
+    }
+  };
+
+  // --- Commission Handlers ---
+
+  // Save global commission rate
+  const handleSaveGlobalRate = async () => {
+    const parsed = parseFloat(globalRateInput);
+    if (isNaN(parsed) || parsed < 0 || parsed > 100) return;
+
+    setGlobalRateSaving(true);
+    setGlobalRateSuccess(null);
+    try {
+      await setDoc(doc(db, "platformSettings", "fees"), {
+        globalCommissionRate: parsed / 100,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      setGlobalRateSuccess(`Global rate updated to ${parsed}%`);
+      setTimeout(() => setGlobalRateSuccess(null), 3000);
+    } catch (err) {
+      console.error("Error saving global rate:", err);
+    } finally {
+      setGlobalRateSaving(false);
+    }
+  };
+
+  // Apply per-organizer fee override
+  const handleApplyOrgFee = async (orgUser) => {
+    const inputVal = orgFeeInputs[orgUser.uid];
+    const parsed = parseFloat(inputVal);
+    if (isNaN(parsed) || parsed < 0 || parsed > 100) return;
+
+    setOrgFeeSaving(prev => ({ ...prev, [orgUser.uid]: true }));
+    try {
+      await setDoc(doc(db, "organizerFees", orgUser.uid), {
+        commissionRate: parsed / 100,
+        organizerName: orgUser.displayName || orgUser.email || "Unknown",
+        organizerEmail: orgUser.email || "",
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Error applying organizer fee:", err);
+    } finally {
+      setOrgFeeSaving(prev => ({ ...prev, [orgUser.uid]: false }));
+    }
+  };
+
+  // Reset organizer override (delete the document, reverts to global)
+  const handleResetOrgFee = async (orgUid) => {
+    setOrgFeeSaving(prev => ({ ...prev, [orgUid]: true }));
+    try {
+      await deleteDoc(doc(db, "organizerFees", orgUid));
+      setOrgFeeInputs(prev => {
+        const next = { ...prev };
+        delete next[orgUid];
+        return next;
+      });
+    } catch (err) {
+      console.error("Error resetting organizer fee:", err);
+    } finally {
+      setOrgFeeSaving(prev => ({ ...prev, [orgUid]: false }));
     }
   };
 
@@ -286,6 +377,165 @@ const Admin = () => {
                 {tickets.filter(t => t.status === "checked-in").length} check-ins processed
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* Commission Control Panel */}
+        <div className="bg-white rounded-[2rem] border border-neutral-100 shadow-xl shadow-neutral-100/50 p-6 md:p-8 mb-12">
+          <div className="flex items-center gap-2 border-b border-neutral-100 pb-4 mb-6">
+            <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+              <Percent size={16} />
+            </div>
+            <div>
+              <h3 className="font-display font-semibold text-lg text-[#2A2A2A]">Commission Control</h3>
+              <p className="text-[10px] text-neutral-400 font-light">Manage platform fees globally or per organizer.</p>
+            </div>
+          </div>
+
+          {/* Global Rate Section */}
+          <div className="mb-8">
+            <label className="block text-xs font-semibold text-neutral-400 mb-1.5 pl-1 uppercase tracking-wider">Global Platform Commission</label>
+            <p className="text-[10px] text-neutral-400 font-light pl-1 mb-3">This rate applies to all organizers unless individually overridden below.</p>
+            <div className="flex items-center gap-3">
+              <div className="relative flex-grow max-w-[200px]">
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={globalRateInput}
+                  onChange={(e) => setGlobalRateInput(e.target.value)}
+                  className="w-full h-11 px-4 pr-10 rounded-2xl border border-neutral-200 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/25 focus:border-emerald-500 text-sm font-mono font-semibold text-[#2A2A2A] placeholder-neutral-300 transition-all"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 text-xs font-semibold">%</span>
+              </div>
+              <button
+                onClick={handleSaveGlobalRate}
+                disabled={globalRateSaving}
+                className="h-11 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-neutral-200 text-white font-display text-xs font-semibold tracking-wider uppercase transition-all duration-300 shadow-md flex items-center gap-2"
+              >
+                {globalRateSaving ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-white/35 border-t-white animate-spin"></div>
+                ) : (
+                  <Check size={14} />
+                )}
+                Save Global Rate
+              </button>
+              <span className="text-xs text-neutral-400 font-light">
+                Current: <span className="font-semibold text-[#2A2A2A]">{globalRate}%</span>
+              </span>
+            </div>
+            {globalRateSuccess && (
+              <div className="mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs flex gap-2 items-center">
+                <Check size={14} className="shrink-0 text-emerald-500" />
+                <span>{globalRateSuccess}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Per-Organizer Override Table */}
+          <div>
+            <label className="block text-xs font-semibold text-neutral-400 mb-1.5 pl-1 uppercase tracking-wider">Per-Organizer Overrides</label>
+            <p className="text-[10px] text-neutral-400 font-light pl-1 mb-3">Set a custom commission rate for individual organizers. Overrides take priority over the global rate at checkout.</p>
+
+            {(() => {
+              const organizers = users.filter(u => u.role === "organizer");
+              if (organizers.length === 0) {
+                return (
+                  <div className="py-8 text-center text-xs text-neutral-400 font-light border border-dashed border-neutral-100 rounded-2xl bg-neutral-50/50">
+                    No registered organizers found on the platform.
+                  </div>
+                );
+              }
+              return (
+                <div className="border border-neutral-100 rounded-2xl overflow-hidden">
+                  {/* Table Header */}
+                  <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-neutral-50/80 border-b border-neutral-100 text-[9px] uppercase tracking-wider font-semibold text-neutral-400">
+                    <div className="col-span-4">Organizer</div>
+                    <div className="col-span-2 text-center">Active Rate</div>
+                    <div className="col-span-3 text-center">Custom Rate</div>
+                    <div className="col-span-3 text-center">Actions</div>
+                  </div>
+                  {/* Table Rows */}
+                  <div className="divide-y divide-neutral-100 max-h-[320px] overflow-y-auto no-scrollbar">
+                    {organizers.map((org) => {
+                      const override = organizerFees[org.uid];
+                      const hasOverride = !!override;
+                      const activeRate = hasOverride ? (override.commissionRate * 100) : globalRate;
+                      const currentInput = orgFeeInputs[org.uid] ?? (hasOverride ? (override.commissionRate * 100).toString() : "");
+                      const isSaving = orgFeeSaving[org.uid] || false;
+
+                      return (
+                        <div key={org.uid} className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-neutral-50/50 transition-colors">
+                          {/* Organizer Info */}
+                          <div className="col-span-4 min-w-0">
+                            <span className="block text-xs font-semibold text-[#2A2A2A] truncate">{org.displayName || "Unnamed"}</span>
+                            <span className="block text-[10px] text-neutral-400 font-light truncate">{org.email || "No email"}</span>
+                          </div>
+
+                          {/* Active Rate Badge */}
+                          <div className="col-span-2 flex justify-center">
+                            <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold font-mono ${
+                              hasOverride
+                                ? "bg-amber-50 text-amber-600 border border-amber-100"
+                                : "bg-neutral-100 text-neutral-500 border border-neutral-200/50"
+                            }`}>
+                              {activeRate}%
+                            </span>
+                            {!hasOverride && (
+                              <span className="text-[8px] text-neutral-300 font-light ml-1 self-center">global</span>
+                            )}
+                          </div>
+
+                          {/* Custom Rate Input */}
+                          <div className="col-span-3 flex justify-center">
+                            <div className="relative w-full max-w-[100px]">
+                              <input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="100"
+                                placeholder={globalRate.toString()}
+                                value={currentInput}
+                                onChange={(e) => setOrgFeeInputs(prev => ({ ...prev, [org.uid]: e.target.value }))}
+                                className="w-full h-8 px-3 pr-7 rounded-xl border border-neutral-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/25 focus:border-amber-400 text-[11px] font-mono font-semibold text-[#2A2A2A] placeholder-neutral-300 transition-all"
+                              />
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 text-[10px] font-semibold">%</span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="col-span-3 flex justify-center gap-1.5">
+                            <button
+                              onClick={() => handleApplyOrgFee(org)}
+                              disabled={isSaving || !currentInput}
+                              className="h-8 px-3 rounded-xl bg-[#358597] hover:bg-[#2C6E7D] disabled:bg-neutral-200 text-white text-[10px] font-semibold tracking-wide uppercase transition-all flex items-center gap-1"
+                            >
+                              {isSaving ? (
+                                <div className="w-3 h-3 rounded-full border-2 border-white/35 border-t-white animate-spin"></div>
+                              ) : (
+                                <Check size={10} />
+                              )}
+                              Apply
+                            </button>
+                            {hasOverride && (
+                              <button
+                                onClick={() => handleResetOrgFee(org.uid)}
+                                disabled={isSaving}
+                                className="h-8 px-3 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 disabled:bg-neutral-50 text-neutral-500 hover:text-rose-600 text-[10px] font-semibold tracking-wide uppercase transition-all flex items-center gap-1"
+                              >
+                                <RotateCcw size={10} />
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

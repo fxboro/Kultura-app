@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { doc, collection, runTransaction, serverTimestamp } from "firebase/firestore";
+import React, { useState, useEffect } from "react";
+import { doc, collection, runTransaction, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { X, Sparkles, AlertCircle, CreditCard, Sparkle, CheckCircle2, Calendar, MapPin, User, Flame } from "lucide-react";
@@ -18,6 +18,48 @@ const BookingModal = ({ isOpen, onClose, event, onSuccess }) => {
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
 
+  // Dynamic commission rate (resolved from Firestore)
+  const [commissionRate, setCommissionRate] = useState(0.025); // default 2.5%
+
+  // Fetch the applicable commission rate when the modal opens
+  useEffect(() => {
+    if (!isOpen || !event) return;
+
+    const fetchCommissionRate = async () => {
+      try {
+        // 1. Check for organizer-specific override
+        const orgFeeRef = doc(db, "organizerFees", event.organizerId);
+        const orgFeeSnap = await getDoc(orgFeeRef);
+        if (orgFeeSnap.exists()) {
+          const rate = orgFeeSnap.data().commissionRate;
+          if (typeof rate === "number" && rate >= 0) {
+            setCommissionRate(rate);
+            return;
+          }
+        }
+
+        // 2. Fall back to global platform fee
+        const globalFeeRef = doc(db, "platformSettings", "fees");
+        const globalFeeSnap = await getDoc(globalFeeRef);
+        if (globalFeeSnap.exists()) {
+          const rate = globalFeeSnap.data().globalCommissionRate;
+          if (typeof rate === "number" && rate >= 0) {
+            setCommissionRate(rate);
+            return;
+          }
+        }
+
+        // 3. Hardcoded fallback
+        setCommissionRate(0.025);
+      } catch (err) {
+        console.error("Error fetching commission rate:", err);
+        setCommissionRate(0.025);
+      }
+    };
+
+    fetchCommissionRate();
+  }, [isOpen, event]);
+
   if (!isOpen || !event) return null;
 
   const { name, date, price, inventory, soldCount, isFree, hypeMode, image, category } = event;
@@ -27,7 +69,7 @@ const BookingModal = ({ isOpen, onClose, event, onSuccess }) => {
   // Pricing calculations
   const ticketPrice = isFree ? 0 : price;
   const subtotal = ticketPrice * quantity;
-  const bookingFee = isFree ? 0 : subtotal * 0.025; // 2.5% commission fee
+  const bookingFee = isFree ? 0 : subtotal * commissionRate;
   const processingFee = isFree ? 0 : (subtotal > 0 ? subtotal * 0.014 + 0.25 : 0); // 1.4% + $0.25 Stripe fee
   const totalCost = subtotal + bookingFee + processingFee;
 
@@ -399,7 +441,7 @@ const BookingModal = ({ isOpen, onClose, event, onSuccess }) => {
                 {!isFree && !hypeMode && (
                   <>
                     <div className="flex justify-between">
-                      <span className="text-neutral-400 font-light">Service Fee (2.5%)</span>
+                      <span className="text-neutral-400 font-light">Platform Fee ({(commissionRate * 100).toFixed(1)}%)</span>
                       <span className="font-semibold text-neutral-600">${bookingFee.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
