@@ -7,7 +7,7 @@ import CreateEventModal from "../../components/organizer/CreateEventModal";
 import GateScanner from "../../components/organizer/GateScanner";
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -81,13 +81,24 @@ const Dashboard = () => {
           </div>
 
           <button 
-            onClick={() => setCreateModalOpen(true)}
-            className="h-12 px-6 rounded-full bg-[#EA7963] text-white hover:bg-[#D96853] transition-all duration-300 font-display font-medium tracking-wide shadow-md flex items-center justify-center gap-2 self-start sm:self-auto shrink-0"
+            onClick={() => profile?.approved === true && setCreateModalOpen(true)}
+            disabled={profile?.approved !== true}
+            className="h-12 px-6 rounded-full bg-[#EA7963] text-white hover:bg-[#D96853] disabled:bg-neutral-200 disabled:text-neutral-400 disabled:cursor-not-allowed transition-all duration-300 font-display font-medium tracking-wide shadow-md flex items-center justify-center gap-2 self-start sm:self-auto shrink-0"
           >
             <Plus size={18} />
             Create Event
           </button>
         </div>
+
+        {profile?.approved !== true && (
+          <div className="mb-8 p-5 rounded-3xl bg-amber-50 border border-amber-200/60 text-amber-800 text-xs flex gap-3.5 items-start font-sans leading-relaxed text-left shadow-sm animate-pulse">
+            <BadgeAlert size={20} className="shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <span className="block font-bold text-sm text-amber-900 mb-0.5">Profile Pending Verification</span>
+              <span>Your organizer profile is currently awaiting administrator review. You cannot publish new events or manage gate operations until verified.</span>
+            </div>
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
@@ -242,7 +253,7 @@ const Dashboard = () => {
 
           {/* Interactive Gate Scanner Panel (1/3 width) */}
           <div className="lg:col-span-1">
-            <GateScanner onCheckInSuccess={fetchOrganizerData} />
+            <GateScanner onCheckInSuccess={fetchOrganizerData} disabled={profile?.approved !== true} />
           </div>
 
         </div>

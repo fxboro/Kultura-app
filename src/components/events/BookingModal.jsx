@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { doc, collection, runTransaction, getDoc, serverTimestamp } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import { doc, collection, runTransaction, getDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
-import { X, Sparkles, AlertCircle, CreditCard, Sparkle, CheckCircle2, Calendar, MapPin, User, Flame } from "lucide-react";
+import { X, Sparkles, AlertCircle, CreditCard, CheckCircle2, Flame, PartyPopper } from "lucide-react";
 
 const BookingModal = ({ isOpen, onClose, event, onSuccess }) => {
   const { user } = useAuth();
   const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [status, setStatus] = useState("form"); // "form" | "loading" | "success"
   const [generatedTickets, setGeneratedTickets] = useState([]);
@@ -167,6 +167,11 @@ const BookingModal = ({ isOpen, onClose, event, onSuccess }) => {
             price: ticketPrice,
             status: freshEventData.hypeMode ? "waitlist" : "valid",
             purchaseDate: new Date(),
+            // Copy meetup data for wallet display
+            meetupEnabled: event.meetupEnabled || false,
+            ...(event.meetupEnabled && event.meetupVenueName && { meetupVenueName: event.meetupVenueName }),
+            ...(event.meetupEnabled && event.meetupVenueAddress && { meetupVenueAddress: event.meetupVenueAddress }),
+            ...(event.meetupEnabled && event.meetupNote && { meetupNote: event.meetupNote }),
           };
 
           transaction.set(ticketRef, ticketData);
@@ -298,6 +303,17 @@ const BookingModal = ({ isOpen, onClose, event, onSuccess }) => {
                 <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 text-amber-700 text-xs flex gap-2">
                   <Flame size={16} className="shrink-0 text-amber-500" />
                   <span>We'll email you at <strong>{user?.email}</strong> the moment ticket bookings open!</span>
+                </div>
+              )}
+
+              {/* Meetup Teaser */}
+              {event.meetupEnabled && (
+                <div className="p-3 bg-purple-50 rounded-xl border border-purple-100 text-purple-700 text-xs flex gap-2 items-start">
+                  <PartyPopper size={16} className="shrink-0 text-purple-500 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block text-[10px] uppercase tracking-wider text-purple-500 mb-0.5">After-Party Included</span>
+                    <span>This event includes a secret post-event meetup. Details will be revealed after you check in at the gate.</span>
+                  </div>
                 </div>
               )}
             </div>

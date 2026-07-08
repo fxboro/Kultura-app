@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
-import { X, Sparkles, AlertCircle, Plus } from "lucide-react";
+import { X, Sparkles, AlertCircle, Plus, MapPin, PartyPopper } from "lucide-react";
 
 const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [image, setImage] = useState("");
@@ -13,6 +13,19 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
   const [vibe, setVibe] = useState("Chill");
   const [price, setPrice] = useState("");
   const [inventory, setInventory] = useState("");
+  
+  // Location & Duration
+  const [venueName, setVenueName] = useState("");
+  const [venueAddress, setVenueAddress] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [estimatedDuration, setEstimatedDuration] = useState("");
+
+  // After-Event Meetup
+  const [meetupEnabled, setMeetupEnabled] = useState(false);
+  const [meetupVenueName, setMeetupVenueName] = useState("");
+  const [meetupVenueAddress, setMeetupVenueAddress] = useState("");
+  const [meetupNote, setMeetupNote] = useState("");
   
   // Toggles
   const [isFree, setIsFree] = useState(false);
@@ -42,6 +55,12 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
 
     if (!user) {
       setError("You must be logged in to create an event.");
+      setLoading(false);
+      return;
+    }
+
+    if (profile?.role === "organizer" && profile?.approved !== true) {
+      setError("Your organizer profile is not yet approved. You cannot create new events.");
       setLoading(false);
       return;
     }
@@ -103,6 +122,17 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
         hypeMode,
         soldCount: 0,
         waitlistCount: 0,
+        // Location & Duration (optional)
+        ...(venueName && { venueName }),
+        ...(venueAddress && { venueAddress }),
+        ...(latitude && { latitude: parseFloat(latitude) }),
+        ...(longitude && { longitude: parseFloat(longitude) }),
+        ...(estimatedDuration && { estimatedDuration: parseInt(estimatedDuration, 10) }),
+        // After-Event Meetup (optional)
+        meetupEnabled,
+        ...(meetupEnabled && meetupVenueName && { meetupVenueName }),
+        ...(meetupEnabled && meetupVenueAddress && { meetupVenueAddress }),
+        ...(meetupEnabled && meetupNote && { meetupNote }),
         createdAt: serverTimestamp()
       };
 
@@ -118,6 +148,15 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
       setInventory("");
       setIsFree(false);
       setHypeMode(false);
+      setVenueName("");
+      setVenueAddress("");
+      setLatitude("");
+      setLongitude("");
+      setEstimatedDuration("");
+      setMeetupEnabled(false);
+      setMeetupVenueName("");
+      setMeetupVenueAddress("");
+      setMeetupNote("");
       setValidationErrors({});
       
       if (onEventCreated) onEventCreated();
@@ -350,6 +389,133 @@ const CreateEventModal = ({ isOpen, onClose, onEventCreated }) => {
                   <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#EA7963]"></div>
                 </label>
               </div>
+            </div>
+
+            {/* Venue & Location Section */}
+            <div className="space-y-4 pt-3 border-t border-neutral-100">
+              <div className="flex items-center gap-1.5 text-[#358597] mb-1">
+                <MapPin size={14} />
+                <span className="text-xs font-semibold uppercase tracking-wider">Venue & Location</span>
+                <span className="text-[9px] text-neutral-400 font-light ml-1">(Optional)</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Venue Name</label>
+                  <input
+                    type="text"
+                    value={venueName}
+                    onChange={(e) => setVenueName(e.target.value)}
+                    placeholder="e.g. Bode Museum"
+                    className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Est. Duration (min)</label>
+                  <input
+                    type="number"
+                    value={estimatedDuration}
+                    onChange={(e) => setEstimatedDuration(e.target.value)}
+                    placeholder="120"
+                    className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Venue Address</label>
+                <input
+                  type="text"
+                  value={venueAddress}
+                  onChange={(e) => setVenueAddress(e.target.value)}
+                  placeholder="e.g. Am Kupfergraben, 10117 Berlin"
+                  className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Latitude</label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={latitude}
+                    onChange={(e) => setLatitude(e.target.value)}
+                    placeholder="52.5200"
+                    className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Longitude</label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={longitude}
+                    onChange={(e) => setLongitude(e.target.value)}
+                    placeholder="13.4050"
+                    className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* After-Event Meetup Section */}
+            <div className="space-y-3 pt-3 border-t border-neutral-100">
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-50/80 border border-neutral-100/50">
+                <div>
+                  <span className="block text-sm font-semibold text-[#2A2A2A] flex items-center gap-1.5">
+                    <PartyPopper size={14} className="text-[#EA7963]" />
+                    After-Event Meetup
+                  </span>
+                  <span className="block text-[10px] text-neutral-400 font-light mt-0.5">Partner with a local venue for post-event socializing.</span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={meetupEnabled}
+                    onChange={(e) => setMeetupEnabled(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#EA7963]"></div>
+                </label>
+              </div>
+
+              {meetupEnabled && (
+                <div className="space-y-3 pl-1 animate-in fade-in duration-300">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Meetup Venue</label>
+                      <input
+                        type="text"
+                        value={meetupVenueName}
+                        onChange={(e) => setMeetupVenueName(e.target.value)}
+                        placeholder="e.g. Café Einstein"
+                        className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Meetup Address</label>
+                      <input
+                        type="text"
+                        value={meetupVenueAddress}
+                        onChange={(e) => setMeetupVenueAddress(e.target.value)}
+                        placeholder="e.g. Unter den Linden 42"
+                        className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Secret Note</label>
+                    <input
+                      type="text"
+                      value={meetupNote}
+                      onChange={(e) => setMeetupNote(e.target.value)}
+                      placeholder="e.g. Ask for the Kultura table"
+                      className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#EA7963]/25 focus:border-[#EA7963] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

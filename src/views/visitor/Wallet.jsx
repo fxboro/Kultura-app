@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
-import { Ticket, Award, History, Calendar, MapPin, Search, ArrowUpRight, Check, Sparkles, Flame } from "lucide-react";
+import { Ticket, Award, History, Calendar, MapPin, ArrowUpRight, Check, Sparkles, Flame, Gift, Star, Route, PartyPopper } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import ItineraryBuilder from "../../components/discovery/ItineraryBuilder";
 
 const Wallet = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("active"); // "active" | "waitlist" | "history"
+  const [activeTab, setActiveTab] = useState("active"); // "active" | "waitlist" | "history" | "rewards" | "itinerary"
   const [tickets, setTickets] = useState([]);
+  const [completedTrails, setCompletedTrails] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch user tickets in real-time
@@ -40,6 +42,33 @@ const Wallet = () => {
     });
 
     return () => unsubscribe();
+  }, [user]);
+
+  // Fetch completed trails (rewards)
+  useEffect(() => {
+    if (!user) return;
+
+    const rewardsRef = collection(db, "users", user.uid, "completedTrails");
+    const unsubscribe = onSnapshot(rewardsRef, (snapshot) => {
+      const fetched = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      // Sort by completedAt (newest first)
+      fetched.sort((a, b) => {
+        const timeA = a.completedAt?.seconds || 0;
+        const timeB = b.completedAt?.seconds || 0;
+        return timeB - timeA;
+      });
+      setCompletedTrails(fetched);
+    }, (err) => {
+      console.error("Error listening to completed trails:", err);
+    });
+
+    return () => {
+      unsubscribe();
+      setCompletedTrails([]);
+    };
   }, [user]);
 
   // Filter tickets by activeTab
@@ -140,15 +169,46 @@ const Wallet = () => {
               </span>
             )}
           </button>
+
+          <button 
+            onClick={() => setActiveTab("rewards")}
+            className={`pb-3 font-display text-sm font-semibold tracking-wide flex items-center gap-2 border-b-2 transition-all duration-300 ${
+              activeTab === "rewards" 
+                ? "border-amber-500 text-amber-600" 
+                : "border-transparent text-neutral-400 font-light hover:text-[#2A2A2A]"
+            }`}
+          >
+            <Gift size={16} /> 
+            Rewards
+            {completedTrails.length > 0 && (
+              <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-sans">
+                {completedTrails.length}
+              </span>
+            )}
+          </button>
+
+          <button 
+            onClick={() => setActiveTab("itinerary")}
+            className={`pb-3 font-display text-sm font-semibold tracking-wide flex items-center gap-2 border-b-2 transition-all duration-300 ${
+              activeTab === "itinerary" 
+                ? "border-[#358597] text-[#358597]" 
+                : "border-transparent text-neutral-400 font-light hover:text-[#2A2A2A]"
+            }`}
+          >
+            <Route size={16} /> 
+            Itinerary
+          </button>
         </div>
 
-        {/* Dynamic Loading state */}
-        {loading ? (
+        {/* Itinerary Tab — renders independently */}
+        {activeTab === "itinerary" ? (
+          <ItineraryBuilder tickets={tickets} />
+        ) : loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#358597]"></div>
             <p className="mt-4 text-xs text-neutral-400 font-light">Loading ticket archive...</p>
           </div>
-        ) : filteredTickets.length === 0 ? (
+        ) : filteredTickets.length === 0 && activeTab !== "rewards" ? (
           /* Empty Wallet View */
           <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed border-neutral-200 rounded-[2.5rem] bg-neutral-50/20 text-center">
             <div className={`w-16 h-16 rounded-full flex items-center justify-center border mb-4 shadow-sm ${
@@ -210,119 +270,252 @@ const Wallet = () => {
               });
 
               return (
-                <div 
-                  key={t.id} 
-                  className={`bg-white rounded-3xl border border-neutral-100 hover:border-neutral-200/80 shadow-xl shadow-neutral-100/40 overflow-hidden flex flex-col sm:flex-row min-h-[180px] transition-all relative ${
-                    t.status === "checked-in" ? "opacity-95" : ""
-                  }`}
-                >
-                  {/* LEFT STUB: Event details */}
-                  <div className="p-5 flex gap-4 flex-grow text-left">
-                    {/* Event Banner */}
-                    <img 
-                      src={t.eventImage || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=200&auto=format&fit=crop"} 
-                      alt={t.eventName} 
-                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-neutral-200/45 shrink-0 select-none align-middle"
-                      loading="lazy"
-                    />
-                    
-                    <div className="flex flex-col justify-between">
-                      <div>
-                        {/* Status / Category tag */}
-                        <div className="flex flex-wrap gap-2 items-center mb-1">
-                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-neutral-100 border border-neutral-200/50 text-neutral-500 font-bold uppercase tracking-wider font-sans">
-                            {t.eventCategory || "Trail"}
+                <div key={t.id} className="flex flex-col gap-3 h-full">
+                  <div 
+                    className={`bg-white rounded-3xl border border-neutral-100 hover:border-neutral-200/80 shadow-xl shadow-neutral-100/40 overflow-hidden flex flex-col sm:flex-row min-h-[180px] transition-all relative ${
+                      t.status === "checked-in" ? "opacity-95" : ""
+                    }`}
+                  >
+                    {/* LEFT STUB: Event details */}
+                    <div className="p-5 flex gap-4 flex-grow text-left">
+                      {/* Event Banner */}
+                      <img 
+                        src={t.eventImage || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=200&auto=format&fit=crop"} 
+                        alt={t.eventName} 
+                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-neutral-200/45 shrink-0 select-none align-middle"
+                        loading="lazy"
+                      />
+                      
+                      <div className="flex flex-col justify-between">
+                        <div>
+                          {/* Status / Category tag */}
+                          <div className="flex flex-wrap gap-2 items-center mb-1">
+                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-neutral-100 border border-neutral-200/50 text-neutral-500 font-bold uppercase tracking-wider font-sans">
+                              {t.eventCategory || "Trail"}
+                            </span>
+                            
+                            {t.status === "waitlist" && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 font-semibold uppercase tracking-wider font-sans flex items-center gap-0.5">
+                                <Flame size={9} /> Waitlist
+                              </span>
+                            )}
+                            
+                            {t.status === "checked-in" && (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 font-semibold uppercase tracking-wider font-sans">
+                                Stamped
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 className="font-display font-bold text-base text-[#2A2A2A] leading-tight">
+                            {t.eventName}
+                          </h3>
+                          
+                          <p className="text-[11px] text-neutral-400 font-light mt-1.5 flex items-center gap-1 font-sans">
+                            <Calendar size={12} className="text-[#358597]" />
+                            <span>{formattedDate} • {formattedTime}</span>
+                          </p>
+                        </div>
+
+                        <div className="mt-4 sm:mt-0">
+                          <span className="block text-[8px] uppercase tracking-wider text-neutral-400 font-semibold leading-none">Admission Paid</span>
+                          <span className="font-display font-bold text-sm text-[#2A2A2A] mt-0.5 block">
+                            {t.price === 0 ? "Free Entry" : `$${t.price.toFixed(2)}`}
                           </span>
-                          
-                          {t.status === "waitlist" && (
-                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 font-semibold uppercase tracking-wider font-sans flex items-center gap-0.5">
-                              <Flame size={9} /> Waitlist
-                            </span>
-                          )}
-                          
-                          {t.status === "checked-in" && (
-                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 font-semibold uppercase tracking-wider font-sans">
-                              Stamped
-                            </span>
-                          )}
                         </div>
-
-                        <h3 className="font-display font-bold text-base text-[#2A2A2A] leading-tight">
-                          {t.eventName}
-                        </h3>
-                        
-                        <p className="text-[11px] text-neutral-400 font-light mt-1.5 flex items-center gap-1 font-sans">
-                          <Calendar size={12} className="text-[#358597]" />
-                          <span>{formattedDate} • {formattedTime}</span>
-                        </p>
-                      </div>
-
-                      <div className="mt-4 sm:mt-0">
-                        <span className="block text-[8px] uppercase tracking-wider text-neutral-400 font-semibold leading-none">Admission Paid</span>
-                        <span className="font-display font-bold text-sm text-[#2A2A2A] mt-0.5 block">
-                          {t.price === 0 ? "Free Entry" : `$${t.price.toFixed(2)}`}
-                        </span>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Dash/Perforated Line separator */}
-                  <div className="hidden sm:flex flex-col justify-between items-center py-2 shrink-0 select-none">
-                    <div className="w-4 h-4 bg-[#FDFDFD] rounded-full border-r border-neutral-100 -mt-4" />
-                    <div className="w-px h-28 border-l border-dashed border-neutral-200" />
-                    <div className="w-4 h-4 bg-[#FDFDFD] rounded-full border-r border-neutral-100 -mb-4" />
-                  </div>
+                    {/* Dash/Perforated Line separator */}
+                    <div className="hidden sm:flex flex-col justify-between items-center py-2 shrink-0 select-none">
+                      <div className="w-4 h-4 bg-[#FDFDFD] rounded-full border-r border-neutral-100 -mt-4" />
+                      <div className="w-px h-28 border-l border-dashed border-neutral-200" />
+                      <div className="w-4 h-4 bg-[#FDFDFD] rounded-full border-r border-neutral-100 -mb-4" />
+                    </div>
 
-                  {/* RIGHT STUB: Barcode / Scan details */}
-                  <div className="p-5 sm:w-44 bg-neutral-50/50 border-t sm:border-t-0 sm:border-l border-neutral-100 flex flex-col justify-between items-center shrink-0">
-                    
-                    {t.status === "waitlist" ? (
-                      <div className="flex flex-col items-center justify-center flex-grow py-4">
-                        <Flame size={24} className="text-amber-500 mb-1" />
-                        <span className="text-[10px] text-amber-600 font-semibold uppercase tracking-wider font-sans">Waitlist Code</span>
-                        <span className="font-mono font-bold text-sm text-[#2A2A2A] mt-1">{t.ticketCode}</span>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="w-full text-center">
-                          <span className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 leading-none block mb-1">Gate Passcode</span>
-                          <span className="font-mono font-bold text-lg text-[#2A2A2A] block tracking-widest">{t.ticketCode}</span>
+                    {/* RIGHT STUB: Barcode / Scan details */}
+                    <div className="p-5 sm:w-44 bg-neutral-50/50 border-t sm:border-t-0 sm:border-l border-neutral-100 flex flex-col justify-between items-center shrink-0">
+                      
+                      {t.status === "waitlist" ? (
+                        <div className="flex flex-col items-center justify-center flex-grow py-4">
+                          <Flame size={24} className="text-amber-500 mb-1" />
+                          <span className="text-[10px] text-amber-600 font-semibold uppercase tracking-wider font-sans">Waitlist Code</span>
+                          <span className="font-mono font-bold text-sm text-[#2A2A2A] mt-1">{t.ticketCode}</span>
                         </div>
-
-                        {/* Barcode Visual */}
-                        <div className={`w-full mt-3 ${t.status === "checked-in" ? "opacity-30 select-none pointer-events-none" : ""}`}>
-                          {renderStripeBarcode(t.ticketCode)}
-                        </div>
-                      </>
-                    )}
-
-                    <div className="w-full text-center mt-3 border-t border-neutral-100/80 pt-2 text-[10px] font-sans">
-                      {t.status === "checked-in" ? (
-                        <span className="font-semibold text-emerald-600">Checked In</span>
-                      ) : t.status === "waitlist" ? (
-                        <span className="text-amber-600 font-medium">Notify on Open</span>
                       ) : (
-                        <span className="text-[#358597] font-medium">Ready to Scan</span>
+                        <>
+                          <div className="w-full text-center">
+                            <span className="text-[9px] uppercase tracking-wider font-semibold text-neutral-400 leading-none block mb-1">Gate Passcode</span>
+                            <span className="font-mono font-bold text-lg text-[#2A2A2A] block tracking-widest">{t.ticketCode}</span>
+                          </div>
+
+                          {/* Barcode Visual */}
+                          <div className={`w-full mt-3 ${t.status === "checked-in" ? "opacity-30 select-none pointer-events-none" : ""}`}>
+                            {renderStripeBarcode(t.ticketCode)}
+                          </div>
+                        </>
                       )}
+
+                      <div className="w-full text-center mt-3 border-t border-neutral-100/80 pt-2 text-[10px] font-sans">
+                        {t.status === "checked-in" ? (
+                          <span className="font-semibold text-emerald-600">Checked In</span>
+                        ) : t.status === "waitlist" ? (
+                          <span className="text-amber-600 font-medium">Notify on Open</span>
+                        ) : (
+                          <span className="text-[#358597] font-medium">Ready to Scan</span>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Stamped Stamp Overlay for Checked-In tickets */}
+                    {t.status === "checked-in" && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none select-none">
+                        <div className="border-[3px] border-emerald-600/70 bg-white/70 backdrop-blur-sm px-6 py-2 rounded-2xl rotate-[-12deg] shadow-lg flex items-center gap-1.5">
+                          <Check size={18} className="text-emerald-600 font-bold shrink-0" />
+                          <span className="font-display font-bold text-xs text-emerald-700 tracking-widest uppercase">
+                            Passport Stamped
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Stamped Stamp Overlay for Checked-In tickets */}
-                  {t.status === "checked-in" && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none select-none">
-                      <div className="border-[3px] border-emerald-600/70 bg-white/70 backdrop-blur-sm px-6 py-2 rounded-2xl rotate-[-12deg] shadow-lg flex items-center gap-1.5">
-                        <Check size={18} className="text-emerald-600 font-bold shrink-0" />
-                        <span className="font-display font-bold text-xs text-emerald-700 tracking-widest uppercase">
-                          Passport Stamped
-                        </span>
+                  {/* After-Event Meetup Details (Unlocked/Revealed) */}
+                  {t.meetupEnabled && t.status === "checked-in" && (
+                    <div className="bg-gradient-to-br from-purple-900 via-indigo-950 to-neutral-950 border border-purple-800/40 rounded-3xl p-5 shadow-lg animate-in slide-in-from-bottom duration-500 text-left text-white relative overflow-hidden">
+                      {/* Decorative background elements */}
+                      <div className="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-purple-500/20 blur-xl pointer-events-none" />
+                      <div className="absolute -left-6 -top-6 w-20 h-20 rounded-full bg-indigo-500/10 blur-lg pointer-events-none" />
+                      
+                      <div className="flex items-start gap-3.5 relative z-10">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center shrink-0">
+                          <PartyPopper size={18} className="text-purple-300" />
+                        </div>
+                        <div className="flex-grow min-w-0">
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/20 font-bold uppercase tracking-wider inline-block mb-1.5">
+                            Unlocked After-Party Meetup
+                          </span>
+                          <h4 className="font-display font-bold text-sm text-white truncate">
+                            {t.meetupVenueName || "Partner Venue"}
+                          </h4>
+                          <p className="text-[10px] text-purple-200/70 font-light mt-0.5 flex items-center gap-1">
+                            <MapPin size={10} className="text-purple-300 shrink-0" />
+                            <span className="truncate">{t.meetupVenueAddress || "Address provided by organizer"}</span>
+                          </p>
+                          {t.meetupNote && (
+                            <p className="text-[11px] text-purple-200 bg-purple-950/40 border border-purple-800/30 rounded-xl p-2.5 mt-3 italic font-light leading-relaxed">
+                              "{t.meetupNote}"
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
 
+                  {/* After-Event Meetup Teaser (Locked) */}
+                  {t.meetupEnabled && t.status !== "checked-in" && (
+                    <div className="bg-neutral-50 border border-neutral-100 rounded-3xl p-4 shadow-sm text-left flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-neutral-100 flex items-center justify-center shrink-0">
+                        <PartyPopper size={16} className="text-neutral-400" />
+                      </div>
+                      <div className="min-w-0 flex-grow">
+                        <span className="block text-[10px] uppercase tracking-wider text-neutral-400 font-semibold">After-Event Meetup</span>
+                        <span className="text-[10px] text-[#358597] font-medium flex items-center gap-1 mt-0.5">
+                          <span>🔒 Secret location unlocks after check-in at gate</span>
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
+        )}
+
+        {/* Rewards Tab Content */}
+        {activeTab === "rewards" && (
+          completedTrails.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4 border border-dashed border-neutral-200 rounded-[2.5rem] bg-neutral-50/20 text-center">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center border mb-4 shadow-sm bg-amber-50 border-amber-100 text-amber-500">
+                <Gift size={26} />
+              </div>
+              <h4 className="font-display font-bold text-lg text-[#2A2A2A] tracking-tight">
+                No Rewards Unlocked Yet
+              </h4>
+              <p className="text-neutral-400 text-xs font-light max-w-sm mt-2 leading-relaxed">
+                Complete city trails by attending all required events and scanning your pass at the gate. Rewards and badges will appear here.
+              </p>
+              <button
+                onClick={() => navigate("/")}
+                className="mt-6 h-10 px-5 rounded-full bg-amber-500 hover:bg-amber-600 text-white transition-all text-xs font-semibold tracking-wider uppercase shadow-md flex items-center gap-1.5"
+              >
+                Browse City Trails
+                <ArrowUpRight size={14} className="shrink-0" />
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {completedTrails.map((reward) => {
+                const completedDate = reward.completedAt?.seconds
+                  ? new Date(reward.completedAt.seconds * 1000).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "Recently";
+
+                // Generate a deterministic reward code from trail ID
+                const rewardCode = `KULTURA-${(reward.trailId || "TRAIL").substring(0, 4).toUpperCase()}${Math.abs(reward.trailId?.split("").reduce((a, c) => a + c.charCodeAt(0), 0) || 0) % 900 + 100}`;
+
+                return (
+                  <div
+                    key={reward.id}
+                    className="bg-white rounded-3xl border border-neutral-100 shadow-xl shadow-neutral-100/40 overflow-hidden relative"
+                  >
+                    {/* Decorative gradient top bar */}
+                    <div className={`h-2 w-full bg-gradient-to-r ${reward.themeColor ? reward.themeColor.split(" ").filter(c => c.startsWith("from-") || c.startsWith("to-")).join(" ") : "from-amber-400 to-orange-500"}`} />
+
+                    <div className="p-6">
+                      <div className="flex items-start gap-4">
+                        {/* Badge Icon */}
+                        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+                          <Star size={24} className="text-amber-500" />
+                        </div>
+
+                        <div className="flex-grow min-w-0">
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 font-bold uppercase tracking-wider inline-block mb-1.5">
+                            Trail Complete
+                          </span>
+                          <h3 className="font-display font-bold text-base text-[#2A2A2A] leading-tight truncate">
+                            {reward.trailName}
+                          </h3>
+                          <p className="text-[10px] text-neutral-400 font-light mt-0.5">
+                            Earned: {completedDate}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Badge */}
+                      <div className="mt-4 flex items-center gap-2 p-3 rounded-2xl bg-neutral-50/80 border border-neutral-100/50">
+                        <Award size={16} className="text-[#358597] shrink-0" />
+                        <div>
+                          <span className="block text-[9px] uppercase tracking-wider text-neutral-400 font-semibold">Badge Earned</span>
+                          <span className="text-sm font-display font-bold text-[#2A2A2A]">{reward.badge}</span>
+                        </div>
+                      </div>
+
+                      {/* Reward Code */}
+                      <div className="mt-3 p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+                        <span className="block text-[9px] uppercase tracking-wider text-emerald-500 font-semibold mb-0.5">Reward Code</span>
+                        <span className="font-mono font-bold text-sm text-emerald-700 tracking-wider">{rewardCode}</span>
+                        <p className="text-[10px] text-emerald-600/80 font-light mt-1">{reward.reward}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
         )}
       </div>
     </div>

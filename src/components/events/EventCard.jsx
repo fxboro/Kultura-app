@@ -1,8 +1,8 @@
-import React, { memo } from "react";
-import { Calendar, MapPin, Tag, Sparkles, Flame, CheckCircle } from "lucide-react";
+import { memo } from "react";
+import { Calendar, MapPin, Sparkles, Flame, PartyPopper } from "lucide-react";
 
 const EventCard = memo(({ event, onBook }) => {
-  const { name, date, image, category, vibe, price, inventory, soldCount, isFree, hypeMode } = event;
+  const { name, date, image, category, vibe, price, inventory, soldCount, isFree, hypeMode, venueName, meetupEnabled } = event;
 
   const capacity = inventory || 100;
   const sold = soldCount || 0;
@@ -78,6 +78,14 @@ const EventCard = memo(({ event, onBook }) => {
             Hype Mode
           </div>
         )}
+
+        {/* After-Party Badge */}
+        {meetupEnabled && !hypeMode && (
+          <div className="absolute top-4 right-4 bg-purple-600/90 text-white text-[10px] font-bold uppercase tracking-wider py-1 px-3 rounded-full shadow-md flex items-center gap-1 border border-purple-400/50 backdrop-blur-sm">
+            <PartyPopper size={11} />
+            After-Party
+          </div>
+        )}
       </div>
 
       {/* Content Section */}
@@ -88,6 +96,14 @@ const EventCard = memo(({ event, onBook }) => {
             <Calendar size={13} />
             <span>{formattedDate} • {formattedTime}</span>
           </div>
+
+          {/* Venue Name */}
+          {venueName && (
+            <div className="flex items-center gap-1.5 text-neutral-400 text-[11px] font-light mb-2">
+              <MapPin size={12} className="text-[#EA7963] shrink-0" />
+              <span className="truncate">{venueName}</span>
+            </div>
+          )}
 
           {/* Event Title */}
           <h3 className="font-display font-bold text-xl text-[#2A2A2A] leading-tight mb-2 tracking-tight group-hover:text-[#358597] transition-colors duration-300">

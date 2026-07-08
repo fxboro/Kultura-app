@@ -1,25 +1,28 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { collection, query, getDocs, onSnapshot, addDoc, where } from "firebase/firestore";
+import { collection, query, onSnapshot, addDoc, where } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
-import { Search, MapPin, Compass, Sparkles, Flame, RefreshCw, Award, Ticket, CheckCircle } from "lucide-react";
+import { Search, MapPin, Compass, Sparkles, Flame, RefreshCw, Award, CheckCircle, Star, Map, LayoutGrid } from "lucide-react";
 import EventCard from "../../components/events/EventCard";
 import BookingModal from "../../components/events/BookingModal";
+import VibeMap from "../../components/discovery/VibeMap";
 
 const Discover = () => {
   const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const [dbTrails, setDbTrails] = useState([]);
   const [events, setEvents] = useState([]);
   const [checkedInTickets, setCheckedInTickets] = useState([]);
+  const [completedTrailIds, setCompletedTrailIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [selectedVibe, setSelectedVibe] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [locationQuery, setLocationQuery] = useState("Berlin, Germany");
+  const [viewMode, setViewMode] = useState("list"); // "list" | "map"
 
   // Booking states
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -111,10 +114,7 @@ const Discover = () => {
 
   // 2. Fetch user's checked-in tickets for Trail calculations
   useEffect(() => {
-    if (!user) {
-      setCheckedInTickets([]);
-      return;
-    }
+    if (!user) return;
 
     const ticketsRef = collection(db, "tickets");
     const q = query(
@@ -130,13 +130,29 @@ const Discover = () => {
       console.error("Error listening to checked-in tickets: ", err);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      setCheckedInTickets([]);
+    };
   }, [user]);
 
-  // Helper: Count checked-in tickets for a specific theme/category
-  const getCheckedInCountForCategory = (category) => {
-    return checkedInTickets.filter(t => t.eventCategory === category).length;
-  };
+  // 3. Fetch user's completed trails for persistent reward state
+  useEffect(() => {
+    if (!user) return;
+
+    const rewardsRef = collection(db, "users", user.uid, "completedTrails");
+    const unsubscribe = onSnapshot(rewardsRef, (snapshot) => {
+      const ids = new Set(snapshot.docs.map((doc) => doc.id));
+      setCompletedTrailIds(ids);
+    }, (err) => {
+      console.error("Error listening to completed trails: ", err);
+    });
+
+    return () => {
+      unsubscribe();
+      setCompletedTrailIds(new Set());
+    };
+  }, [user]);
 
   // Click card button action handler
   const handleOpenBooking = useCallback((event) => {
@@ -167,6 +183,12 @@ const Discover = () => {
           isFree: true,
           hypeMode: false,
           organizerId: "demo-organizer-uid",
+          venueName: "Hamburger Bahnhof",
+          venueAddress: "Invalidenstraße 50-51, 10557 Berlin",
+          latitude: 52.5283,
+          longitude: 13.3725,
+          estimatedDuration: 90,
+          meetupEnabled: false,
           createdAt: new Date()
         },
         {
@@ -182,6 +204,15 @@ const Discover = () => {
           isFree: false,
           hypeMode: false,
           organizerId: "demo-organizer-uid",
+          venueName: "A-Trane Jazz Club",
+          venueAddress: "Bleibtreustraße 1, 10623 Berlin",
+          latitude: 52.5069,
+          longitude: 13.3228,
+          estimatedDuration: 120,
+          meetupEnabled: true,
+          meetupVenueName: "Café Einstein Stammhaus",
+          meetupVenueAddress: "Kurfürstenstraße 58, 10785 Berlin",
+          meetupNote: "Ask for the Kultura table — first drink is on the house for ticket holders.",
           createdAt: new Date()
         },
         {
@@ -197,6 +228,15 @@ const Discover = () => {
           isFree: false,
           hypeMode: false,
           organizerId: "demo-organizer-uid",
+          venueName: "East Side Gallery",
+          venueAddress: "Mühlenstraße 3-100, 10243 Berlin",
+          latitude: 52.5051,
+          longitude: 13.4396,
+          estimatedDuration: 150,
+          meetupEnabled: true,
+          meetupVenueName: "Holzmarkt Bar",
+          meetupVenueAddress: "Holzmarktstraße 25, 10243 Berlin",
+          meetupNote: "Meet at the rooftop terrace. Show your Kultura pass for a secret menu.",
           createdAt: new Date()
         },
         {
@@ -212,6 +252,12 @@ const Discover = () => {
           isFree: false,
           hypeMode: true,
           organizerId: "demo-organizer-uid",
+          venueName: "Berliner Philharmonie",
+          venueAddress: "Herbert-von-Karajan-Straße 1, 10785 Berlin",
+          latitude: 52.5104,
+          longitude: 13.3696,
+          estimatedDuration: 180,
+          meetupEnabled: false,
           createdAt: new Date()
         },
         {
@@ -227,6 +273,12 @@ const Discover = () => {
           isFree: true,
           hypeMode: false,
           organizerId: "demo-organizer-uid",
+          venueName: "Volkspark Friedrichshain",
+          venueAddress: "Am Friedrichshain, 10249 Berlin",
+          latitude: 52.5282,
+          longitude: 13.4382,
+          estimatedDuration: 120,
+          meetupEnabled: false,
           createdAt: new Date()
         }
       ];
@@ -338,6 +390,96 @@ const Discover = () => {
       {/* Main Discover Layout */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-12">
         
+        {/* Featured Gatherings Section */}
+        {(() => {
+          const featuredEvents = events.filter(e => e.featured === true);
+          if (featuredEvents.length === 0) return null;
+
+          return (
+            <div className="mb-14 text-left">
+              <div className="mb-6">
+                <span className="text-xs uppercase tracking-wider text-amber-500 font-semibold flex items-center gap-1">
+                  <Star size={14} className="fill-amber-500 text-amber-500" /> Spotlight Curation
+                </span>
+                <h2 className="text-3xl font-bold font-display text-[#2A2A2A] tracking-tight mt-1">Featured Gatherings</h2>
+                <p className="text-neutral-500 text-xs font-light">Handpicked premium cultural highlights curated by our platform team.</p>
+              </div>
+
+              {/* Horizontal Scroll Carousel */}
+              <div className="flex gap-6 overflow-x-auto pb-4 pt-1 snap-x no-scrollbar select-none">
+                {featuredEvents.map((event) => {
+                  return (
+                    <div 
+                      key={event.id}
+                      className="w-[280px] sm:w-[320px] shrink-0 bg-white border border-neutral-100 rounded-3xl overflow-hidden shadow-xl shadow-neutral-100/50 hover:shadow-2xl hover:shadow-neutral-200/50 hover:border-neutral-200/50 transition-all duration-300 snap-start flex flex-col justify-between"
+                    >
+                      {/* Image container */}
+                      <div className="relative h-44 w-full overflow-hidden">
+                        <img 
+                          src={event.image} 
+                          alt={event.name} 
+                          className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                        {/* Featured Tag overlay */}
+                        <div className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/25 text-white text-[10px] font-bold uppercase tracking-wider">
+                          <Star size={10} className="fill-amber-400 text-amber-400" />
+                          Featured
+                        </div>
+                      </div>
+
+                      {/* Event Details */}
+                      <div className="p-5 flex-grow flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 border border-neutral-200/50 text-neutral-500 font-bold uppercase tracking-wider">
+                              {event.category}
+                            </span>
+                            <span className="text-[10px] text-neutral-400 font-light font-mono">
+                              {event.vibe}
+                            </span>
+                          </div>
+
+                          <h3 className="font-display font-bold text-base text-[#2A2A2A] leading-tight mb-2 truncate">
+                            {event.name}
+                          </h3>
+
+                          <p className="text-[11px] text-neutral-400 font-light mb-4">
+                            {new Date(event.date).toLocaleDateString(undefined, {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </p>
+                        </div>
+
+                        {/* Button and price */}
+                        <div className="flex items-center justify-between pt-3 border-t border-neutral-50">
+                          <div>
+                            <span className="block text-[8px] uppercase tracking-wider text-neutral-400 font-semibold">Pass Rate</span>
+                            <span className="font-display font-bold text-sm text-[#2A2A2A]">
+                              {event.isFree ? "Free" : `$${event.price?.toFixed(2)}`}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => handleOpenBooking(event)}
+                            className="h-9 px-4 rounded-full bg-[#2A2A2A] text-white hover:bg-neutral-800 transition-colors text-xs font-semibold tracking-wide uppercase font-display shadow-sm flex items-center gap-1"
+                          >
+                            Book Spot
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* City Trails Passport Section */}
         <div className="mb-14">
           <div className="text-left mb-6">
@@ -352,7 +494,7 @@ const Discover = () => {
             {[...defaultTrails, ...dbTrails].map((trail) => {
               const checkedInCount = getCheckedInCountForTrail(trail);
               const progressPercent = Math.min(100, Math.round((checkedInCount / trail.goalCount) * 100));
-              const isCompleted = checkedInCount >= trail.goalCount;
+              const isCompleted = completedTrailIds.has(trail.id) || checkedInCount >= trail.goalCount;
 
               return (
                 <div 
@@ -463,6 +605,32 @@ const Discover = () => {
               </button>
             ))}
           </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 mt-4 md:mt-0 ml-0 md:ml-3 shrink-0">
+            <button
+              onClick={() => setViewMode("list")}
+              className={`h-9 w-9 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                viewMode === "list"
+                  ? "bg-[#2A2A2A] text-white shadow-md"
+                  : "bg-neutral-100 text-neutral-400 hover:bg-neutral-200/60"
+              }`}
+              title="List View"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode("map")}
+              className={`h-9 w-9 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                viewMode === "map"
+                  ? "bg-[#2A2A2A] text-white shadow-md"
+                  : "bg-neutral-100 text-neutral-400 hover:bg-neutral-200/60"
+              }`}
+              title="Map View"
+            >
+              <Map size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Loading Spinner */}
@@ -496,6 +664,13 @@ const Discover = () => {
               Seed Sample Events
             </button>
           </div>
+        ) : viewMode === "map" ? (
+          /* Interactive Vibe Map View */
+          <VibeMap
+            events={filteredEvents}
+            onBook={handleOpenBooking}
+            selectedVibe={selectedVibe}
+          />
         ) : (
           /* Active Event Feed Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">

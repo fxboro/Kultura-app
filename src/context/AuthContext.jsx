@@ -51,7 +51,8 @@ export const AuthProvider = ({ children }) => {
       const newProfile = {
         email,
         role: role || "visitor",
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        ...(role === "organizer" ? { approved: false } : {})
       };
       
       // Save profile to Firestore

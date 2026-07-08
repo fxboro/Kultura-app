@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { collection, onSnapshot, addDoc, deleteDoc, doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
-import { ShieldAlert, DollarSign, Users, Award, Sparkles, Plus, Trash2, Check, Briefcase, Calendar, Info, Percent, RotateCcw } from "lucide-react";
+import { ShieldAlert, DollarSign, Users, Award, Sparkles, Plus, Trash2, Check, Briefcase, Calendar, Info, Percent, RotateCcw, Star, CheckCircle, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Admin = () => {
@@ -87,7 +87,7 @@ const Admin = () => {
 
     // 2. Listen to Users
     const unsubscribeUsers = onSnapshot(collection(db, "users"), (snapshot) => {
-      const fetchedUsers = snapshot.docs.map(doc => doc.data());
+      const fetchedUsers = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
       setUsers(fetchedUsers);
     }, (err) => console.error("Admin Error (Users):", err));
 
@@ -262,6 +262,28 @@ const Admin = () => {
       console.error("Error resetting organizer fee:", err);
     } finally {
       setOrgFeeSaving(prev => ({ ...prev, [orgUid]: false }));
+    }
+  };
+
+  // Toggle approval status for an organizer
+  const handleToggleApproval = async (orgUid, currentStatus) => {
+    try {
+      await updateDoc(doc(db, "users", orgUid), {
+        approved: !currentStatus
+      });
+    } catch (err) {
+      console.error("Error toggling approval status:", err);
+    }
+  };
+
+  // Toggle featured status for an event
+  const handleToggleFeatured = async (eventId, currentStatus) => {
+    try {
+      await updateDoc(doc(db, "events", eventId), {
+        featured: !currentStatus
+      });
+    } catch (err) {
+      console.error("Error toggling featured status:", err);
     }
   };
 
@@ -537,6 +559,156 @@ const Admin = () => {
               );
             })()}
           </div>
+        </div>
+
+        {/* Organizer Verification Board */}
+        <div className="bg-white rounded-[2rem] border border-neutral-100 shadow-xl shadow-neutral-100/50 p-6 md:p-8 mb-12">
+          <div className="flex items-center gap-2 border-b border-neutral-100 pb-4 mb-6">
+            <div className="w-8 h-8 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-600">
+              <Briefcase size={16} />
+            </div>
+            <div>
+              <h3 className="font-display font-semibold text-lg text-[#2A2A2A]">Organizer Verification Board</h3>
+              <p className="text-[10px] text-neutral-400 font-light">Approve or revoke publishing credentials for platform event organizers.</p>
+            </div>
+          </div>
+
+          {(() => {
+            const organizers = users.filter(u => u.role === "organizer");
+            if (organizers.length === 0) {
+              return (
+                <div className="py-8 text-center text-xs text-neutral-400 font-light border border-dashed border-neutral-100 rounded-2xl bg-neutral-50/50">
+                  No registered organizers found on the platform.
+                </div>
+              );
+            }
+            return (
+              <div className="border border-neutral-100 rounded-2xl overflow-hidden">
+                <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-neutral-50/80 border-b border-neutral-100 text-[9px] uppercase tracking-wider font-semibold text-neutral-400">
+                  <div className="col-span-5">Organizer Info</div>
+                  <div className="col-span-3 text-center">Registration Date</div>
+                  <div className="col-span-2 text-center">Status</div>
+                  <div className="col-span-2 text-center">Action</div>
+                </div>
+                <div className="divide-y divide-neutral-100 max-h-[300px] overflow-y-auto no-scrollbar">
+                  {organizers.map((org) => {
+                    const isApproved = org.approved === true;
+                    const regDate = org.createdAt ? new Date(org.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" }) : "N/A";
+                    return (
+                      <div key={org.uid} className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-neutral-50/50 transition-colors">
+                        <div className="col-span-5 min-w-0 text-left">
+                          <span className="block text-xs font-semibold text-[#2A2A2A] truncate">{org.displayName || "Unnamed"}</span>
+                          <span className="block text-[10px] text-neutral-400 font-light truncate">{org.email || "No email"}</span>
+                        </div>
+                        <div className="col-span-3 text-center text-xs text-neutral-500 font-light">
+                          {regDate}
+                        </div>
+                        <div className="col-span-2 flex justify-center">
+                          <span className={`text-[9px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                            isApproved
+                              ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                              : "bg-amber-50 text-amber-600 border border-amber-100"
+                          }`}>
+                            {isApproved ? "Approved" : "Pending"}
+                          </span>
+                        </div>
+                        <div className="col-span-2 flex justify-center">
+                          <button
+                            onClick={() => handleToggleApproval(org.uid, isApproved)}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-semibold tracking-wide uppercase transition-all flex items-center gap-1 ${
+                              isApproved
+                                ? "bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-100"
+                                : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-100"
+                            }`}
+                          >
+                            {isApproved ? (
+                              <>
+                                <XCircle size={12} />
+                                Revoke
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle size={12} />
+                                Approve
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Featured Event Curation Panel */}
+        <div className="bg-white rounded-[2rem] border border-neutral-100 shadow-xl shadow-neutral-100/50 p-6 md:p-8 mb-12">
+          <div className="flex items-center gap-2 border-b border-neutral-100 pb-4 mb-6">
+            <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600">
+              <Star size={16} />
+            </div>
+            <div>
+              <h3 className="font-display font-semibold text-lg text-[#2A2A2A]">Event Curation & Spotlight</h3>
+              <p className="text-[10px] text-neutral-400 font-light">Promote selected events to the featured gallery carousel at the top of the Discover feed.</p>
+            </div>
+          </div>
+
+          {events.length === 0 ? (
+            <div className="py-8 text-center text-xs text-neutral-400 font-light border border-dashed border-neutral-100 rounded-2xl bg-neutral-50/50">
+              No published events available to curate.
+            </div>
+          ) : (
+            <div className="border border-neutral-100 rounded-2xl overflow-hidden">
+              <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-neutral-50/80 border-b border-neutral-100 text-[9px] uppercase tracking-wider font-semibold text-neutral-400">
+                <div className="col-span-5">Event Details</div>
+                <div className="col-span-3 text-center">Category / Vibe</div>
+                <div className="col-span-2 text-center">Admission Price</div>
+                <div className="col-span-2 text-center">Featured Spotlight</div>
+              </div>
+              <div className="divide-y divide-neutral-100 max-h-[300px] overflow-y-auto no-scrollbar">
+                {events.map((ev) => {
+                  const isFeatured = ev.featured === true;
+                  return (
+                    <div key={ev.id} className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-neutral-50/50 transition-colors">
+                      <div className="col-span-5 flex items-center gap-3 min-w-0 text-left">
+                        <img 
+                          src={ev.image} 
+                          alt={ev.name} 
+                          className="w-8 h-8 rounded-lg object-cover border border-neutral-100 shrink-0"
+                          loading="lazy"
+                        />
+                        <div className="min-w-0">
+                          <span className="block text-xs font-semibold text-[#2A2A2A] truncate">{ev.name}</span>
+                          <span className="block text-[9px] text-neutral-400 font-light">ID: {ev.id.substring(0, 8)}...</span>
+                        </div>
+                      </div>
+                      <div className="col-span-3 text-center text-xs text-neutral-500 font-light">
+                        {ev.category} • {ev.vibe}
+                      </div>
+                      <div className="col-span-2 text-center text-xs font-semibold text-[#2A2A2A]">
+                        {ev.isFree ? "Free" : `$${ev.price?.toFixed(2)}`}
+                      </div>
+                      <div className="col-span-2 flex justify-center">
+                        <button
+                          onClick={() => handleToggleFeatured(ev.id, isFeatured)}
+                          className={`px-3 py-1.5 rounded-xl text-[10px] font-semibold tracking-wide uppercase transition-all flex items-center gap-1 ${
+                            isFeatured
+                              ? "bg-amber-500 text-white hover:bg-amber-600"
+                              : "bg-neutral-50 text-neutral-400 hover:text-[#2A2A2A] border border-neutral-200"
+                          }`}
+                        >
+                          <Star size={12} className={isFeatured ? "fill-white" : ""} />
+                          {isFeatured ? "Featured" : "Spotlight"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Dashboard Main layout splits */}

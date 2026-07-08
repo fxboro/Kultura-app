@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import { collection, query, where, getDocs, doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { useState } from "react";
+import { collection, query, where, getDocs, doc, getDoc, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
 import { Scan, CheckCircle2, ShieldAlert, AlertCircle, RefreshCw, Calendar, User } from "lucide-react";
 
-const GateScanner = ({ onCheckInSuccess }) => {
+const GateScanner = ({ onCheckInSuccess, disabled }) => {
   const { user } = useAuth();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -91,6 +91,49 @@ const GateScanner = ({ onCheckInSuccess }) => {
 
       setStatus("success");
       setMessage("Check-in successful! Admission pass verified.");
+
+      // 5. Trail Completion Detection — check if the attendee completed any trail
+      try {
+        const trailsSnap = await getDocs(collection(db, "trails"));
+        const allTrails = trailsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Get all checked-in tickets for this attendee
+        const attendeeTicketsQ = query(
+          collection(db, "tickets"),
+          where("userId", "==", ticketData.userId),
+          where("status", "==", "checked-in")
+        );
+        const attendeeTicketsSnap = await getDocs(attendeeTicketsQ);
+        const checkedInEventIds = new Set(
+          attendeeTicketsSnap.docs.map(d => d.data().eventId)
+        );
+
+        for (const trail of allTrails) {
+          if (!trail.eventIds || !Array.isArray(trail.eventIds)) continue;
+
+          const completedCount = trail.eventIds.filter(id => checkedInEventIds.has(id)).length;
+          const goalCount = trail.goalCount || 3;
+
+          if (completedCount >= goalCount) {
+            // Check if reward already exists
+            const rewardRef = doc(db, "users", ticketData.userId, "completedTrails", trail.id);
+            const rewardSnap = await getDoc(rewardRef);
+
+            if (!rewardSnap.exists()) {
+              await setDoc(rewardRef, {
+                trailId: trail.id,
+                trailName: trail.name || "Cultural Trail",
+                badge: trail.badge || "Explorer",
+                reward: trail.reward || "Special Reward",
+                themeColor: trail.themeColor || "",
+                completedAt: serverTimestamp()
+              });
+            }
+          }
+        }
+      } catch (trailErr) {
+        console.error("Trail completion check failed (non-blocking):", trailErr);
+      }
       
       if (onCheckInSuccess) {
         onCheckInSuccess();
@@ -110,6 +153,20 @@ const GateScanner = ({ onCheckInSuccess }) => {
     setMessage("");
     setTicketDetails(null);
   };
+
+  if (disabled) {
+    return (
+      <div className="bg-white rounded-[2rem] border border-neutral-100 shadow-xl shadow-neutral-100/50 p-6 md:p-8 flex flex-col items-center justify-center min-h-[300px] text-center font-sans">
+        <div className="w-12 h-12 rounded-full bg-neutral-50 border border-neutral-100 text-neutral-400 flex items-center justify-center mb-4 select-none">
+          <Scan size={22} className="opacity-50" />
+        </div>
+        <h3 className="font-display font-semibold text-base text-[#2A2A2A]">Scanner Locked</h3>
+        <p className="text-neutral-400 text-xs font-light mt-1.5 max-w-[200px] leading-relaxed mx-auto">
+          Verification pending. The gate ticket scanner will unlock once your account is approved.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-[2rem] border border-neutral-100 shadow-xl shadow-neutral-100/50 p-6 md:p-8">
