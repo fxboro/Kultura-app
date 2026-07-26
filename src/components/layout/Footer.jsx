@@ -178,7 +178,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Column 5: Creator Attribution (chimdev.com) & Socials */}
+          {/* Column 5: Creator Attribution (chimadev.com) & Socials */}
           <div className="space-y-4 text-left">
             <h3 className="font-display font-semibold text-sm uppercase tracking-wider text-white border-b border-neutral-800 pb-2">
               Created By
@@ -190,12 +190,12 @@ const Footer = () => {
                 Platform Design & Engineering
               </span>
               <a
-                href="https://chimdev.com"
+                href="https://chimadev.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-base font-bold font-display text-white hover:text-[#EA7963] transition-colors group"
               >
-                <span>chimdev.com</span>
+                <span>chimadev.com</span>
                 <ArrowUpRight size={16} className="text-[#EA7963] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
               </a>
               <p className="text-[11px] text-neutral-400 font-light leading-snug">
@@ -232,12 +232,12 @@ const Footer = () => {
           <div className="flex items-center gap-1.5">
             <span>Built with passion by</span>
             <a
-              href="https://chimdev.com"
+              href="https://chimadev.com"
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-[#358597] hover:text-[#EA7963] hover:underline transition-colors inline-flex items-center gap-0.5"
             >
-              chimdev.com
+              chimadev.com
               <ArrowUpRight size={12} />
             </a>
           </div>

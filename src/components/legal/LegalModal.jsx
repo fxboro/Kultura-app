@@ -91,12 +91,12 @@ const LegalModal = ({ isOpen, initialDoc = "about", onClose }) => {
               <div className="pt-2">
                 <span className="block font-semibold text-[#2A2A2A] text-xs mb-1">Created By:</span>
                 <a 
-                  href="https://chimdev.com" 
+                  href="https://chimadev.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 font-semibold text-[#358597] hover:text-[#EA7963] hover:underline"
                 >
-                  chimdev.com <ArrowUpRight size={13} />
+                  chimadev.com <ArrowUpRight size={13} />
                 </a>
               </div>
             </div>
@@ -135,17 +135,17 @@ const LegalModal = ({ isOpen, initialDoc = "about", onClose }) => {
                 <div>
                   <span className="font-semibold text-[#2A2A2A] block">Creator & Engineering Agency:</span>
                   <a 
-                    href="https://chimdev.com" 
+                    href="https://chimadev.com" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="font-bold text-[#358597] hover:underline inline-flex items-center gap-0.5"
                   >
-                    chimdev.com <ArrowUpRight size={12} />
+                    chimadev.com <ArrowUpRight size={12} />
                   </a>
                 </div>
                 <div>
                   <span className="font-semibold text-[#2A2A2A] block">Contact & Inquiries:</span>
-                  <span>contact@kultura.dev | hello@chimdev.com</span>
+                  <span>contact@kultura.dev | hello@chimadev.com</span>
                 </div>
                 <div>
                   <span className="font-semibold text-[#2A2A2A] block">Responsible for Content:</span>
@@ -194,7 +194,7 @@ const LegalModal = ({ isOpen, initialDoc = "about", onClose }) => {
 
         {/* Modal Footer */}
         <div className="p-4 px-8 border-t border-neutral-100 bg-neutral-50/50 flex justify-between items-center text-xs text-neutral-400">
-          <span>Crafted by <a href="https://chimdev.com" target="_blank" rel="noopener noreferrer" className="text-[#358597] font-semibold hover:underline">chimdev.com</a></span>
+          <span>Crafted by <a href="https://chimadev.com" target="_blank" rel="noopener noreferrer" className="text-[#358597] font-semibold hover:underline">chimadev.com</a></span>
           <button 
             onClick={onClose}
             className="px-5 py-2 rounded-full bg-[#2A2A2A] text-white hover:bg-neutral-800 font-display font-medium transition-colors"
