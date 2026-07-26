@@ -145,11 +145,11 @@ const LegalModal = ({ isOpen, initialDoc = "about", onClose }) => {
                 </div>
                 <div>
                   <span className="font-semibold text-[#2A2A2A] block">Contact & Inquiries:</span>
-                  <span>contact@kultura.dev | hello@chimadev.com</span>
+                  <span>contact@kultura.dev | dayo@chimadev.com</span>
                 </div>
                 <div>
                   <span className="font-semibold text-[#2A2A2A] block">Responsible for Content:</span>
-                  <span>Chima Okereke / Lead Product Engineer</span>
+                  <span>Chima Ohiagbaji / Lead Product Engineer</span>
                 </div>
               </div>
             </div>
