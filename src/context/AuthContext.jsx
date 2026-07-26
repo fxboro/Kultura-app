@@ -4,7 +4,8 @@ import {
   signInWithEmailAndPassword, 
   signInWithPopup, 
   signOut, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  sendPasswordResetEmail
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "../lib/firebase";
@@ -127,8 +128,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const resetPassword = async (email) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signUp, login, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, signUp, login, loginWithGoogle, logout, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

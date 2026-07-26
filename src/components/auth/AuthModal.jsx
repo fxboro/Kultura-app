@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { X, Sparkles, LogIn, UserPlus, AlertCircle, CheckCircle, Building2 } from "lucide-react";
+import { X, Sparkles, LogIn, UserPlus, AlertCircle, CheckCircle, Building2, Eye, EyeOff, KeyRound, ArrowLeft } from "lucide-react";
 
 const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
-  const { login, signUp, loginWithGoogle, profile: currentProfile } = useAuth();
+  const { login, signUp, loginWithGoogle, resetPassword, profile: currentProfile } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState(defaultMode); // "login" or "signup"
-  const [role, setRole] = useState("visitor"); // "visitor" or "organizer"
+  const [mode, setMode] = useState(defaultMode); // "login" | "signup" | "reset"
+  const [role, setRole] = useState("visitor"); // "visitor" | "organizer"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [organizationName, setOrganizationName] = useState("");
   const [venueName, setVenueName] = useState("");
@@ -26,92 +27,10 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
     } else if (userRole === "admin") {
       navigate("/admin");
     }
-    // Visitors stay on "/" (Discover feed) — no redirect needed
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessMessage(null);
-    setLoading(true);
-
-    try {
-      if (mode === "login") {
-        const userCredential = await login(email, password);
-        // After login, we need to fetch profile to determine redirect
-        // The profile is set by onAuthStateChanged, but we can use the current profile
-        // We'll wait briefly for the profile to be set, then redirect
-        // Use a small timeout to let onAuthStateChanged trigger
-        setTimeout(() => {
-          // Re-read from auth context (will be available by now)
-          onClose();
-          // We redirect based on the profile that's already fetched
-        }, 100);
-        return;
-      } else {
-        // Sign-up flow
-        const profileData = {
-          displayName: displayName.trim(),
-          ...(role === "organizer" ? {
-            organizationName: organizationName.trim(),
-            ...(venueName.trim() ? { venueName: venueName.trim() } : {})
-          } : {})
-        };
-        await signUp(email, password, role, profileData);
-        
-        // Show welcome confirmation briefly
-        if (role === "organizer") {
-          setSuccessMessage("Application received! Your organizer profile is pending admin approval.");
-        } else {
-          setSuccessMessage(`Welcome to Kultura, ${displayName.trim() || "Explorer"}! 🎭`);
-        }
-
-        // Close modal after showing success, then redirect
-        setTimeout(() => {
-          onClose();
-          redirectByRole(role);
-        }, 2200);
-        return;
-      }
-    } catch (err) {
-      console.error("Auth error:", err);
-      // Clean up firebase error codes to make them human readable
-      let msg = "An authentication error occurred. Please try again.";
-      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        msg = "Invalid email or password.";
-      } else if (err.code === "auth/email-already-in-use") {
-        msg = "This email is already registered.";
-      } else if (err.code === "auth/weak-password") {
-        msg = "Password should be at least 6 characters.";
-      } else if (err.code === "auth/invalid-email") {
-        msg = "Please enter a valid email address.";
-      }
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setError(null);
-    setSuccessMessage(null);
-    setLoading(true);
-    try {
-      // Pass the selected role in case it's a new user registration
-      await loginWithGoogle(role);
-      onClose();
-    } catch (err) {
-      console.error("Google sign-in error:", err);
-      setError("Failed to authenticate with Google.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle login redirect after profile is loaded via onAuthStateChanged
   const handleLoginSuccess = () => {
     onClose();
-    // Use a small delay to ensure profile is loaded
     setTimeout(() => {
       if (currentProfile?.role) {
         redirectByRole(currentProfile.role);
@@ -119,7 +38,6 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
     }, 200);
   };
 
-  // Override handleSubmit for login to use handleLoginSuccess
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -127,10 +45,18 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
     setLoading(true);
 
     try {
-      if (mode === "login") {
+      if (mode === "reset") {
+        if (!email.trim()) {
+          setError("Please enter a valid email address.");
+          setLoading(false);
+          return;
+        }
+        await resetPassword(email.trim());
+        setSuccessMessage("Password reset link sent to your email address! Please check your inbox.");
+        setLoading(false);
+        return;
+      } else if (mode === "login") {
         await login(email, password);
-        // Profile will be loaded by onAuthStateChanged; we need to wait and then redirect.
-        // Close the modal and let the redirect happen after the profile updates.
         setLoading(false);
         handleLoginSuccess();
         return;
@@ -145,7 +71,6 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
         };
         await signUp(email, password, role, profileData);
         
-        // Show welcome confirmation briefly
         if (role === "organizer") {
           setSuccessMessage("Application received! Your organizer profile is pending admin approval.");
         } else {
@@ -153,7 +78,6 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
         }
 
         setLoading(false);
-        // Close modal after showing success, then redirect
         setTimeout(() => {
           onClose();
           redirectByRole(role);
@@ -171,8 +95,25 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
         msg = "Password should be at least 6 characters.";
       } else if (err.code === "auth/invalid-email") {
         msg = "Please enter a valid email address.";
+      } else if (err.code === "auth/too-many-requests") {
+        msg = "Too many attempts. Please wait a moment and try again.";
       }
       setError(msg);
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setSuccessMessage(null);
+    setLoading(true);
+    try {
+      await loginWithGoogle(role);
+      onClose();
+    } catch (err) {
+      console.error("Google sign-in error:", err);
+      setError("Failed to authenticate with Google.");
+    } finally {
       setLoading(false);
     }
   };
@@ -199,15 +140,36 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
             <span className="font-display font-medium text-sm tracking-wide">Kultura Portal</span>
           </div>
 
-          <h2 className="text-3xl font-bold font-display text-[#2A2A2A] tracking-tight mb-6">
-            {mode === "login" ? "Welcome Back" : "Begin Your Trail"}
+          <h2 className="text-3xl font-bold font-display text-[#2A2A2A] tracking-tight mb-2">
+            {mode === "login" ? "Welcome Back" : mode === "reset" ? "Reset Password" : "Begin Your Trail"}
           </h2>
+
+          {mode === "reset" && !successMessage && (
+            <p className="text-neutral-500 text-xs font-light mb-6 leading-relaxed">
+              Enter the email address registered with your Kultura account and we'll send you a secure password reset link.
+            </p>
+          )}
+
+          {mode !== "reset" && (
+            <div className="mb-4" />
+          )}
 
           {/* Success Confirmation */}
           {successMessage && (
             <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs flex gap-2.5 items-start leading-relaxed font-sans animate-in">
               <CheckCircle size={16} className="shrink-0 text-emerald-500 mt-0.5" />
-              <span>{successMessage}</span>
+              <div>
+                <span>{successMessage}</span>
+                {mode === "reset" && (
+                  <button
+                    type="button"
+                    onClick={() => { setMode("login"); setSuccessMessage(null); setError(null); }}
+                    className="block mt-2 font-semibold text-[#358597] hover:underline uppercase tracking-wider text-[10px]"
+                  >
+                    Return to Log In
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -302,6 +264,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
                 </>
               )}
 
+              {/* Email Address */}
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Email Address</label>
                 <input
@@ -314,31 +277,64 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5 pl-1">Password</label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full h-12 px-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#358597]/25 focus:border-[#358597] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light"
-                />
-              </div>
+              {/* Password field with Show/Hide toggle — hidden in reset mode */}
+              {mode !== "reset" && (
+                <div>
+                  <div className="flex justify-between items-center mb-1.5 pl-1">
+                    <label className="text-xs font-medium text-neutral-400">Password</label>
+                    {mode === "login" && (
+                      <button
+                        type="button"
+                        onClick={() => { setMode("reset"); setError(null); setSuccessMessage(null); }}
+                        className="text-xs text-[#358597] hover:underline font-medium transition-colors"
+                      >
+                        Forgot Password?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full h-12 pl-4 pr-11 rounded-2xl border border-neutral-200/80 bg-neutral-50/50 focus:outline-none focus:ring-2 focus:ring-[#358597]/25 focus:border-[#358597] text-sm text-[#2A2A2A] placeholder-neutral-300 transition-all font-light"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors p-1"
+                      title={showPassword ? "Hide password" : "Show password"}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              )}
 
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
                 className={`w-full h-12 rounded-full font-display font-medium tracking-wide text-white transition-all duration-300 shadow-md flex items-center justify-center gap-2 mt-2 ${
                   loading 
                     ? "bg-neutral-400 cursor-not-allowed" 
-                    : mode === "login" 
-                      ? "bg-[#358597] hover:bg-[#2C6E7D]" 
-                      : "bg-[#EA7963] hover:bg-[#D96853]"
+                    : mode === "reset"
+                      ? "bg-[#358597] hover:bg-[#2C6E7D]"
+                      : mode === "login" 
+                        ? "bg-[#358597] hover:bg-[#2C6E7D]" 
+                        : "bg-[#EA7963] hover:bg-[#D96853]"
                 }`}
               >
                 {loading ? (
                   <div className="w-5 h-5 rounded-full border-2 border-white/35 border-t-white animate-spin"></div>
+                ) : mode === "reset" ? (
+                  <>
+                    <KeyRound size={16} />
+                    Send Reset Link
+                  </>
                 ) : mode === "login" ? (
                   <>
                     <LogIn size={16} />
@@ -354,8 +350,8 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
             </form>
           )}
 
-          {/* Social Sign In Divider */}
-          {!successMessage && (
+          {/* Social Sign In Divider (hidden in reset mode) */}
+          {!successMessage && mode !== "reset" && (
             <>
               <div className="relative my-6 font-sans">
                 <div className="absolute inset-0 flex items-center">
@@ -387,7 +383,14 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
           {/* Toggle Mode */}
           {!successMessage && (
             <div className="text-center mt-6 font-sans text-xs font-light text-neutral-400">
-              {mode === "login" ? (
+              {mode === "reset" ? (
+                <button 
+                  onClick={() => { setMode("login"); setError(null); setSuccessMessage(null); }}
+                  className="font-medium text-[#358597] hover:underline inline-flex items-center gap-1 transition-colors"
+                >
+                  <ArrowLeft size={13} /> Back to Log In
+                </button>
+              ) : mode === "login" ? (
                 <p>
                   Don't have an account?{" "}
                   <button 
