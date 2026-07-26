@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  const signUp = async (email, password, role) => {
+  const signUp = async (email, password, role, profileData = {}) => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -52,7 +52,12 @@ export const AuthProvider = ({ children }) => {
         email,
         role: role || "visitor",
         createdAt: new Date().toISOString(),
-        ...(role === "organizer" ? { approved: false } : {})
+        ...(profileData.displayName ? { displayName: profileData.displayName } : {}),
+        ...(role === "organizer" ? {
+          approved: false,
+          ...(profileData.organizationName ? { organizationName: profileData.organizationName } : {}),
+          ...(profileData.venueName ? { venueName: profileData.venueName } : {})
+        } : {})
       };
       
       // Save profile to Firestore
@@ -82,6 +87,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const uid = userCredential.user.uid;
+      const googleDisplayName = userCredential.user.displayName || "";
       
       // Check if profile exists, otherwise create it
       const docRef = doc(db, "users", uid);
@@ -90,13 +96,16 @@ export const AuthProvider = ({ children }) => {
       if (!docSnap.exists()) {
         const newProfile = {
           email: userCredential.user.email,
+          displayName: googleDisplayName,
           role: role,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          ...(role === "organizer" ? { approved: false } : {})
         };
         await setDoc(docRef, newProfile);
         setProfile(newProfile);
       } else {
-        setProfile(docSnap.data());
+        const existingProfile = docSnap.data();
+        setProfile(existingProfile);
       }
       return userCredential;
     } catch (error) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/layout/Navbar";
+import MobileBottomNav from "./components/layout/MobileBottomNav";
 import AuthModal from "./components/auth/AuthModal";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -87,6 +88,9 @@ const AppContent = () => {
           </Routes>
         </Suspense>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav onOpenAuth={() => setAuthModalOpen(true)} />
 
       {/* Global Portal modal */}
       <AuthModal 

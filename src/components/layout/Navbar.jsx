@@ -14,8 +14,10 @@ const Navbar = ({ onOpenAuth }) => {
 
   const getProfileInitials = () => {
     if (!user) return "";
-    if (user.displayName) {
-      return user.displayName.split(" ").map(n => n[0]).join("").toUpperCase();
+    // Prefer Firestore profile displayName over Firebase Auth displayName
+    const name = profile?.displayName || user.displayName;
+    if (name) {
+      return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
     }
     return user.email ? user.email[0].toUpperCase() : "U";
   };
@@ -81,12 +83,18 @@ const Navbar = ({ onOpenAuth }) => {
                 {getProfileInitials()}
               </div>
               <div className="hidden lg:flex flex-col text-left">
-                <span className="text-xs font-medium text-[#2A2A2A] truncate max-w-[120px]">
-                  {user.displayName || user.email}
+                <span className="text-xs font-medium text-[#2A2A2A] truncate max-w-[140px]">
+                  {profile?.displayName || user.displayName || user.email}
                 </span>
-                <span className="text-[9px] uppercase tracking-wider text-neutral-400 font-semibold leading-none mt-0.5">
-                  {profile?.role || "Visitor"}
-                </span>
+                {profile?.role === "organizer" && profile?.organizationName ? (
+                  <span className="text-[9px] text-neutral-400 font-light leading-none mt-0.5 truncate max-w-[140px]">
+                    {profile.organizationName}
+                  </span>
+                ) : (
+                  <span className="text-[9px] uppercase tracking-wider text-neutral-400 font-semibold leading-none mt-0.5">
+                    {profile?.role || "Visitor"}
+                  </span>
+                )}
               </div>
             </div>
             
