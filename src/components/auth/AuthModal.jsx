@@ -90,13 +90,21 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
         msg = "Invalid email or password.";
       } else if (err.code === "auth/email-already-in-use") {
-        msg = "This email is already registered.";
+        msg = "This email is already registered. Please log in instead.";
       } else if (err.code === "auth/weak-password") {
         msg = "Password should be at least 6 characters.";
       } else if (err.code === "auth/invalid-email") {
         msg = "Please enter a valid email address.";
       } else if (err.code === "auth/too-many-requests") {
         msg = "Too many attempts. Please wait a moment and try again.";
+      } else if (err.code === "auth/network-request-failed") {
+        msg = "Network connection failed. Please check your connection and try again.";
+      } else if (err.code === "auth/operation-not-allowed") {
+        msg = "Email/Password sign-in is disabled in Firebase Console.";
+      } else if (err.code === "auth/invalid-api-key" || err.code === "auth/api-key-not-valid") {
+        msg = "Invalid Firebase API Key configuration.";
+      } else if (err.message) {
+        msg = err.message.replace(/^Firebase:\s*/, "").replace(/\s*\(auth\/.*\)\.?$/, "");
       }
       setError(msg);
       setLoading(false);
@@ -112,7 +120,15 @@ const AuthModal = ({ isOpen, onClose, defaultMode = "login" }) => {
       onClose();
     } catch (err) {
       console.error("Google sign-in error:", err);
-      setError("Failed to authenticate with Google.");
+      let msg = "Failed to authenticate with Google.";
+      if (err.code === "auth/popup-closed-by-user") {
+        msg = "Sign-in window was closed before completing.";
+      } else if (err.code === "auth/popup-blocked") {
+        msg = "Sign-in popup was blocked by browser. Please allow popups.";
+      } else if (err.message) {
+        msg = err.message.replace(/^Firebase:\s*/, "");
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }

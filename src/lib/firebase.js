@@ -19,8 +19,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
-// Connect to local emulator suite when running locally
-if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+// Connect to local emulator suite ONLY when explicitly enabled via VITE_USE_EMULATOR === "true"
+if (typeof window !== "undefined" && import.meta.env.VITE_USE_EMULATOR === "true") {
   connectAuthEmulator(auth, "http://localhost:9099");
   connectFirestoreEmulator(db, "localhost", 8080);
 }

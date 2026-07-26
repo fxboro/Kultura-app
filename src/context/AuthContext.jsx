@@ -61,8 +61,12 @@ export const AuthProvider = ({ children }) => {
         } : {})
       };
       
-      // Save profile to Firestore
-      await setDoc(doc(db, "users", uid), newProfile);
+      // Save profile to Firestore (with resilient error catch)
+      try {
+        await setDoc(doc(db, "users", uid), newProfile);
+      } catch (fsError) {
+        console.warn("Firestore profile creation warning (fallback applied):", fsError);
+      }
       setProfile(newProfile);
       return userCredential;
     } catch (error) {
