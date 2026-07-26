@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { collection, query, onSnapshot, addDoc, where } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
-import { Search, MapPin, Compass, Sparkles, Flame, RefreshCw, Award, CheckCircle, Star, Map, LayoutGrid } from "lucide-react";
+import { Search, MapPin, Compass, Flame, RefreshCw, Award, CheckCircle, Star, Map, LayoutGrid } from "lucide-react";
 import EventCard from "../../components/events/EventCard";
 import BookingModal from "../../components/events/BookingModal";
 import VibeMap from "../../components/discovery/VibeMap";
@@ -315,72 +315,67 @@ const Discover = () => {
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-[#2A2A2A] font-sans pb-24">
       {/* Editorial Hero Banner */}
-      <div className="relative overflow-hidden select-none md:mx-6 lg:mx-8 md:mt-4 md:rounded-[2.5rem] min-h-[60vh] sm:min-h-[55vh] md:min-h-[62vh] lg:min-h-[65vh] md:shadow-2xl">
+      <div className="relative overflow-hidden select-none rounded-b-[2rem] sm:rounded-b-[2.5rem] md:rounded-[2.5rem] md:mx-6 lg:mx-8 md:mt-4 min-h-[460px] sm:min-h-[500px] md:min-h-[540px] lg:min-h-[580px] shadow-xl md:shadow-2xl flex flex-col justify-end">
         {/* Hero Background Image */}
         <img 
           src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=1920&auto=format&fit=crop" 
           alt="Cultural Festival" 
           loading="eager"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-center transform scale-105 transition-transform duration-1000 ease-out"
         />
         
         {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a]/95 via-[#2A2A2A]/50 to-[#2A2A2A]/10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/90" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/60 to-transparent opacity-95" />
         
         {/* Hero Content */}
-        <div className="relative z-10 h-full min-h-[60vh] sm:min-h-[55vh] md:min-h-[62vh] lg:min-h-[65vh] flex flex-col justify-end px-5 pb-8 sm:px-8 sm:pb-10 md:px-12 md:pb-14 lg:px-16 lg:pb-16">
-          
-          {/* Tagline Pill */}
-          <div className="inline-flex items-center gap-1.5 self-start px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white text-[11px] font-semibold uppercase tracking-widest mb-5 md:mb-6">
-            <Sparkles size={12} className="text-[#EA7963]" />
-            Kultura Curated Trails
-          </div>
+        <div className="relative z-10 w-full px-4 pt-12 pb-7 sm:px-8 sm:pt-16 sm:pb-9 md:px-12 md:pt-20 md:pb-12 lg:px-16 lg:pt-24 lg:pb-14 flex flex-col justify-end">
           
           {/* Headline */}
-          <h1 className="text-[2rem] leading-[1.08] sm:text-4xl md:text-5xl lg:text-6xl font-bold font-display text-white tracking-tight max-w-3xl mb-3 md:mb-4 text-left">
-            Discover the Soul<br className="hidden sm:block" /> of the City.
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-display text-white tracking-tight max-w-3xl mb-2.5 sm:mb-3.5 md:mb-4 text-left leading-[1.12] sm:leading-[1.08]">
+            Discover the Soul <br className="hidden sm:block" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-neutral-300">
+              of the City.
+            </span>
           </h1>
           
           {/* Subheadline */}
-          <p className="text-white/75 text-sm sm:text-base md:text-lg max-w-xl font-light leading-relaxed mb-7 md:mb-9 text-left">
+          <p className="text-white/80 text-xs sm:text-sm md:text-base lg:text-lg max-w-xl font-light leading-relaxed mb-6 sm:mb-8 md:mb-9 text-left">
             Experience local theater, dynamic gallery openings, historical city trails, and acoustic sessions happening near you.
           </p>
 
           {/* Search Inputs (Glassmorphism) */}
-          <div className="w-full max-w-3xl bg-white/10 backdrop-blur-xl border border-white/15 p-1.5 sm:p-2 rounded-2xl md:rounded-full flex flex-col md:flex-row gap-1.5 sm:gap-2 items-stretch md:items-center shadow-xl shadow-black/10">
+          <div className="w-full max-w-3xl bg-white/12 backdrop-blur-2xl border border-white/20 p-2 sm:p-2.5 rounded-2xl md:rounded-full flex flex-col md:flex-row gap-2 items-stretch md:items-center shadow-2xl shadow-black/30 hover:border-white/30 focus-within:border-white/40 focus-within:bg-white/15 transition-all duration-300">
             {/* Search Field */}
-            <div className="flex-1 flex items-center gap-3 px-3 py-2 md:py-0">
-              <Search className="text-white/50 shrink-0" size={18} />
+            <div className="flex-1 flex items-center gap-2.5 px-3.5 py-2.5 md:py-0 bg-white/5 md:bg-transparent rounded-xl md:rounded-none">
+              <Search className="text-white/60 shrink-0" size={18} />
               <input 
                 type="text" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="What vibe are you looking for?" 
-                className="w-full bg-transparent border-none text-white placeholder-white/40 focus:outline-none font-light text-sm"
+                className="w-full bg-transparent border-none text-white placeholder-white/50 focus:outline-none font-light text-xs sm:text-sm md:text-base"
               />
             </div>
             
             {/* Divider (desktop only) */}
-            <div className="hidden md:block w-px h-6 bg-white/20 shrink-0" />
-            
-            {/* Horizontal divider (mobile only) */}
-            <div className="block md:hidden h-px w-[90%] mx-auto bg-white/15" />
+            <div className="hidden md:block w-px h-7 bg-white/20 shrink-0" />
             
             {/* Location Field */}
-            <div className="flex-1 flex items-center gap-3 px-3 py-2 md:py-0">
-              <MapPin className="text-white/50 shrink-0" size={18} />
+            <div className="flex-1 flex items-center gap-2.5 px-3.5 py-2.5 md:py-0 bg-white/5 md:bg-transparent rounded-xl md:rounded-none">
+              <MapPin className="text-[#EA7963] shrink-0" size={18} />
               <input 
                 type="text" 
                 value={locationQuery}
                 onChange={(e) => setLocationQuery(e.target.value)}
                 placeholder="Berlin, Germany" 
-                className="w-full bg-transparent border-none text-white placeholder-white/40 focus:outline-none font-light text-sm"
+                className="w-full bg-transparent border-none text-white placeholder-white/50 focus:outline-none font-light text-xs sm:text-sm md:text-base"
               />
             </div>
             
             {/* Explore Button */}
-            <button className="h-12 px-8 rounded-xl md:rounded-full bg-[#358597] text-white hover:bg-[#2C6E7D] active:scale-[0.97] transition-all duration-300 font-display font-medium tracking-wide shadow-lg shadow-[#358597]/25 shrink-0 flex items-center justify-center gap-2 text-sm">
-              <Compass size={17} />
+            <button className="w-full md:w-auto h-11 sm:h-12 md:h-13 px-8 rounded-xl md:rounded-full bg-gradient-to-r from-[#358597] to-[#2C6E7D] hover:from-[#2C6E7D] hover:to-[#225763] text-white active:scale-[0.98] transition-all duration-300 font-display font-semibold tracking-wide shadow-lg shadow-[#358597]/30 shrink-0 flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer">
+              <Compass size={18} />
               Explore
             </button>
           </div>
