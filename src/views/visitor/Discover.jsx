@@ -315,7 +315,7 @@ const Discover = () => {
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-[#2A2A2A] font-sans pb-24">
       {/* Editorial Hero Banner */}
-      <div className="relative overflow-hidden select-none rounded-b-[2rem] sm:rounded-b-[2.5rem] md:rounded-[2.5rem] md:mx-6 lg:mx-8 md:mt-4 min-h-[460px] sm:min-h-[500px] md:min-h-[540px] lg:min-h-[580px] shadow-xl md:shadow-2xl flex flex-col justify-end">
+      <div className="relative overflow-hidden select-none rounded-b-[2rem] sm:rounded-b-[2.5rem] md:rounded-[2.5rem] md:mx-6 lg:mx-8 md:mt-4 min-h-[420px] sm:min-h-[450px] md:min-h-[440px] lg:min-h-[460px] shadow-xl md:shadow-2xl flex flex-col justify-end">
         {/* Hero Background Image */}
         <img 
           src="https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=1920&auto=format&fit=crop" 
@@ -329,10 +329,10 @@ const Discover = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-[#121212] via-[#121212]/60 to-transparent opacity-95" />
         
         {/* Hero Content */}
-        <div className="relative z-10 w-full px-4 pt-12 pb-7 sm:px-8 sm:pt-16 sm:pb-9 md:px-12 md:pt-20 md:pb-12 lg:px-16 lg:pt-24 lg:pb-14 flex flex-col justify-end">
+        <div className="relative z-10 w-full px-4 pt-10 pb-6 sm:px-8 sm:pt-12 sm:pb-8 md:px-10 md:pt-14 md:pb-9 lg:px-14 lg:pt-16 lg:pb-10 flex flex-col justify-end">
           
           {/* Headline */}
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-display text-white tracking-tight max-w-3xl mb-2.5 sm:mb-3.5 md:mb-4 text-left leading-[1.12] sm:leading-[1.08]">
+          <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-bold font-display text-white tracking-tight max-w-2xl mb-2.5 md:mb-3 text-left leading-[1.12] sm:leading-[1.08]">
             Discover the Soul <br className="hidden sm:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-neutral-300">
               of the City.
@@ -340,7 +340,7 @@ const Discover = () => {
           </h1>
           
           {/* Subheadline */}
-          <p className="text-white/80 text-xs sm:text-sm md:text-base lg:text-lg max-w-xl font-light leading-relaxed mb-6 sm:mb-8 md:mb-9 text-left">
+          <p className="text-white/80 text-xs sm:text-sm md:text-base max-w-xl font-light leading-relaxed mb-5 md:mb-6 text-left">
             Experience local theater, dynamic gallery openings, historical city trails, and acoustic sessions happening near you.
           </p>
 
@@ -374,7 +374,7 @@ const Discover = () => {
             </div>
             
             {/* Explore Button */}
-            <button className="w-full md:w-auto h-11 sm:h-12 md:h-13 px-8 rounded-xl md:rounded-full bg-gradient-to-r from-[#358597] to-[#2C6E7D] hover:from-[#2C6E7D] hover:to-[#225763] text-white active:scale-[0.98] transition-all duration-300 font-display font-semibold tracking-wide shadow-lg shadow-[#358597]/30 shrink-0 flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer">
+            <button className="w-full md:w-auto h-11 sm:h-12 md:h-12 px-8 rounded-xl md:rounded-full bg-gradient-to-r from-[#358597] to-[#2C6E7D] hover:from-[#2C6E7D] hover:to-[#225763] text-white active:scale-[0.98] transition-all duration-300 font-display font-semibold tracking-wide shadow-lg shadow-[#358597]/30 shrink-0 flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer">
               <Compass size={18} />
               Explore
             </button>
