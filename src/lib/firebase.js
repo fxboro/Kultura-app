@@ -2,15 +2,14 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, connectAuthEmulator } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
-// Your web app's Firebase configuration.
-// Replace placeholders with your own Firebase project credentials.
+// Your web app's Firebase configuration read from environment variables
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-api-key-for-emulator",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "kultura-demo.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "cultura-app-8bf1d",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "kultura-demo.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1234567890",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1234567890:web:1234567890"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "empty_api_key",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "empty_auth_domain",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "empty_project_id",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "empty_storage_bucket",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "empty_sender_id",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "empty_app_id"
 };
 
 // Initialize Firebase
