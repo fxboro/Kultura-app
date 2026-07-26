@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom"
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/layout/Navbar";
 import MobileBottomNav from "./components/layout/MobileBottomNav";
+import Footer from "./components/layout/Footer";
 import AuthModal from "./components/auth/AuthModal";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -88,6 +89,9 @@ const AppContent = () => {
           </Routes>
         </Suspense>
       </main>
+
+      {/* Footer Area */}
+      <Footer />
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav onOpenAuth={() => setAuthModalOpen(true)} />
