@@ -8,6 +8,258 @@ import EventCard from "../../components/events/EventCard";
 import BookingModal from "../../components/events/BookingModal";
 import VibeMap from "../../components/discovery/VibeMap";
 
+const ORGANIZER_INFO = {
+  organizerId: "espasiert-shay-jones-uid",
+  organizerEmail: "c.essfinder@gmail.com",
+  organizerName: "Shay Jones",
+  organizationName: "Espasiert"
+};
+
+const DEFAULT_SEED_EVENTS = [
+  {
+    id: "seed-1",
+    name: "Classic Jazz Quintet Live at A-Trane",
+    date: new Date(Date.now() + 86400000 * 3).toISOString(),
+    image: "https://images.unsplash.com/photo-1511192336575-5a79af67a629?q=80&w=800&auto=format&fit=crop",
+    category: "Music",
+    vibe: "Energetic",
+    price: 35.00,
+    inventory: 80,
+    soldCount: 14,
+    waitlistCount: 0,
+    featured: true,
+    isFree: false,
+    hypeMode: false,
+    ...ORGANIZER_INFO,
+    venueName: "A-Trane Jazz Club",
+    venueAddress: "Bleibtreustraße 1, 10623 Berlin, Germany",
+    latitude: 52.5069,
+    longitude: 13.3228,
+    estimatedDuration: 120,
+    meetupEnabled: true,
+    meetupVenueName: "Café Einstein Stammhaus",
+    meetupVenueAddress: "Kurfürstenstraße 58, 10785 Berlin, Germany",
+    meetupNote: "Ask for the Espasiert table — first drink is on the house for ticket holders.",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "seed-2",
+    name: "Berlin Avant-Garde Gallery Opening",
+    date: new Date(Date.now() + 86400000 * 2).toISOString(),
+    image: "https://images.unsplash.com/photo-1543857778-c4a1a3e0b2eb?q=80&w=800&auto=format&fit=crop",
+    category: "Art",
+    vibe: "Chill",
+    price: 0,
+    inventory: 60,
+    soldCount: 22,
+    waitlistCount: 0,
+    featured: true,
+    isFree: true,
+    hypeMode: false,
+    ...ORGANIZER_INFO,
+    venueName: "Hamburger Bahnhof",
+    venueAddress: "Invalidenstraße 50-51, 10557 Berlin, Germany",
+    latitude: 52.5283,
+    longitude: 13.3725,
+    estimatedDuration: 90,
+    meetupEnabled: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "seed-3",
+    name: "Historical Street Art & Secret Courtyards Trail",
+    date: new Date(Date.now() + 86400000 * 4).toISOString(),
+    image: "https://images.unsplash.com/photo-1561055657-b9e0bf0fa360?q=80&w=800&auto=format&fit=crop",
+    category: "City Trail",
+    vibe: "Local Secret",
+    price: 18.00,
+    inventory: 40,
+    soldCount: 19,
+    waitlistCount: 0,
+    featured: false,
+    isFree: false,
+    hypeMode: false,
+    ...ORGANIZER_INFO,
+    venueName: "East Side Gallery",
+    venueAddress: "Mühlenstraße 3-100, 10243 Berlin, Germany",
+    latitude: 52.5051,
+    longitude: 13.4396,
+    estimatedDuration: 150,
+    meetupEnabled: true,
+    meetupVenueName: "Holzmarkt Bar",
+    meetupVenueAddress: "Holzmarktstraße 25, 10243 Berlin, Germany",
+    meetupNote: "Meet at the rooftop terrace. Show your Espasiert pass for a secret menu.",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "seed-4",
+    name: "Symphony Under the Stars — Open Air Concert",
+    date: new Date(Date.now() + 86400000 * 9).toISOString(),
+    image: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?q=80&w=800&auto=format&fit=crop",
+    category: "Music",
+    vibe: "Chill",
+    price: 45.00,
+    inventory: 150,
+    soldCount: 0,
+    waitlistCount: 38,
+    featured: false,
+    isFree: false,
+    hypeMode: true,
+    ...ORGANIZER_INFO,
+    venueName: "Olympiapark Munich",
+    venueAddress: "Spiridon-Louis-Ring 21, 80809 Munich, Germany",
+    latitude: 48.1737,
+    longitude: 11.5471,
+    estimatedDuration: 180,
+    meetupEnabled: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "seed-5",
+    name: "Shakespeare in the Park: Midsummer Night",
+    date: new Date(Date.now() + 86400000 * 5).toISOString(),
+    image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=800&auto=format&fit=crop",
+    category: "Theater",
+    vibe: "Family Friendly",
+    price: 0,
+    inventory: 120,
+    soldCount: 45,
+    waitlistCount: 0,
+    featured: false,
+    isFree: true,
+    hypeMode: false,
+    ...ORGANIZER_INFO,
+    venueName: "Englischer Garten Amphitheater",
+    venueAddress: "Englischer Garten 1, 80538 Munich, Germany",
+    latitude: 48.1528,
+    longitude: 11.5923,
+    estimatedDuration: 120,
+    meetupEnabled: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "seed-6",
+    name: "London Underground Acoustic Sessions",
+    date: new Date(Date.now() + 86400000 * 6).toISOString(),
+    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=800&auto=format&fit=crop",
+    category: "Nightlife",
+    vibe: "Local Secret",
+    price: 24.00,
+    inventory: 75,
+    soldCount: 18,
+    waitlistCount: 0,
+    featured: true,
+    isFree: false,
+    hypeMode: false,
+    ...ORGANIZER_INFO,
+    venueName: "The Jazz Cafe",
+    venueAddress: "5 Parkway, Camden Town, London NW1 7PG, UK",
+    latitude: 51.5390,
+    longitude: -0.1426,
+    estimatedDuration: 150,
+    meetupEnabled: true,
+    meetupVenueName: "The Hawley Arms",
+    meetupVenueAddress: "2 Castlehaven Rd, London NW1 8QU, UK",
+    meetupNote: "Casual networking session for acoustic lovers and travelers.",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "seed-7",
+    name: "Borough Market Night Food & Wine Crawl",
+    date: new Date(Date.now() + 86400000 * 7).toISOString(),
+    image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=800&auto=format&fit=crop",
+    category: "Food",
+    vibe: "Energetic",
+    price: 32.00,
+    inventory: 35,
+    soldCount: 12,
+    waitlistCount: 0,
+    featured: false,
+    isFree: false,
+    hypeMode: false,
+    ...ORGANIZER_INFO,
+    venueName: "Borough Market",
+    venueAddress: "8 Southwark St, London SE1 1TL, UK",
+    latitude: 51.5055,
+    longitude: -0.0910,
+    estimatedDuration: 180,
+    meetupEnabled: true,
+    meetupVenueName: "Tap & Bottle London",
+    meetupVenueAddress: "64 Hopton St, London SE1 9JH, UK",
+    meetupNote: "Exclusive wine tasting pairing session included for Espasiert pass holders.",
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "seed-8",
+    name: "Edinburgh Fringe Immersive Light & Sculpture Exhibition",
+    date: new Date(Date.now() + 86400000 * 10).toISOString(),
+    image: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=800&auto=format&fit=crop",
+    category: "Art",
+    vibe: "Chill",
+    price: 20.00,
+    inventory: 100,
+    soldCount: 0,
+    waitlistCount: 29,
+    featured: false,
+    isFree: false,
+    hypeMode: true,
+    ...ORGANIZER_INFO,
+    venueName: "Royal Mile Art Hub",
+    venueAddress: "150 Royal Mile, Edinburgh EH1 1QS, UK",
+    latitude: 55.9505,
+    longitude: -3.1856,
+    estimatedDuration: 90,
+    meetupEnabled: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "seed-9",
+    name: "Manchester Vinyl & Deep House Showcase",
+    date: new Date(Date.now() + 86400000 * 6).toISOString(),
+    image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=800&auto=format&fit=crop",
+    category: "Nightlife",
+    vibe: "Energetic",
+    price: 22.00,
+    inventory: 90,
+    soldCount: 31,
+    waitlistCount: 0,
+    featured: false,
+    isFree: false,
+    hypeMode: false,
+    ...ORGANIZER_INFO,
+    venueName: "Albert Hall Manchester",
+    venueAddress: "27 Peter St, Manchester M2 5QR, UK",
+    latitude: 53.4780,
+    longitude: -2.2472,
+    estimatedDuration: 240,
+    meetupEnabled: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "seed-10",
+    name: "Speicherstadt & Elbphilharmonie Architectural Walk",
+    date: new Date(Date.now() + 86400000 * 4).toISOString(),
+    image: "https://images.unsplash.com/photo-1541963463532-d68292c34b19?q=80&w=800&auto=format&fit=crop",
+    category: "City Trail",
+    vibe: "Family Friendly",
+    price: 0,
+    inventory: 80,
+    soldCount: 37,
+    waitlistCount: 0,
+    featured: false,
+    isFree: true,
+    hypeMode: false,
+    ...ORGANIZER_INFO,
+    venueName: "Speicherstadt Hamburg",
+    venueAddress: "Am Sandtorkai 36, 20457 Hamburg, Germany",
+    latitude: 53.5434,
+    longitude: 9.9926,
+    estimatedDuration: 120,
+    meetupEnabled: false,
+    createdAt: new Date().toISOString()
+  }
+];
+
 const Discover = () => {
   const { user } = useAuth();
   const [, setSearchParams] = useSearchParams();
@@ -89,7 +341,7 @@ const Discover = () => {
     }
   ];
 
-  // 1. Fetch live events
+  // 1. Fetch live events with instant fallback to DEFAULT_SEED_EVENTS
   useEffect(() => {
     const eventsRef = collection(db, "events");
     
@@ -102,10 +354,16 @@ const Discover = () => {
 
       // Sort by date/time (earliest first)
       fetchedEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
-      setEvents(fetchedEvents);
+
+      if (fetchedEvents.length > 0) {
+        setEvents(fetchedEvents);
+      } else {
+        setEvents(DEFAULT_SEED_EVENTS);
+      }
       setLoading(false);
     }, (err) => {
-      console.error("Error listening to events: ", err);
+      console.warn("Firestore events listener fallback applied:", err);
+      setEvents(DEFAULT_SEED_EVENTS);
       setLoading(false);
     });
 
