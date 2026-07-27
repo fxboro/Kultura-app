@@ -14,9 +14,17 @@ const GateScanner = ({ onCheckInSuccess, disabled }) => {
 
   const handleScan = async (e) => {
     e.preventDefault();
-    if (!code || code.trim().length !== 6) {
+    let cleanCode = code.trim().toUpperCase();
+    if (cleanCode.startsWith("KULTURA-TICKET:")) {
+      const parts = cleanCode.split(":");
+      if (parts.length >= 2) {
+        cleanCode = parts[1];
+      }
+    }
+
+    if (!cleanCode || cleanCode.length !== 6) {
       setStatus("error");
-      setMessage("Please enter a valid 6-digit code.");
+      setMessage("Please enter a valid 6-digit code or QR code payload.");
       return;
     }
 
@@ -28,7 +36,7 @@ const GateScanner = ({ onCheckInSuccess, disabled }) => {
     try {
       // 1. Query ticket matching the 6-digit code
       const ticketsRef = collection(db, "tickets");
-      const q = query(ticketsRef, where("ticketCode", "==", code.trim().toUpperCase()));
+      const q = query(ticketsRef, where("ticketCode", "==", cleanCode));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {

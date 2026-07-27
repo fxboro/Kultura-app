@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../hooks/useAuth";
-import { Ticket, Award, History, Calendar, MapPin, ArrowUpRight, Check, Sparkles, Flame, Gift, Star, Route, PartyPopper } from "lucide-react";
+import { Ticket, Award, History, Calendar, MapPin, ArrowUpRight, Check, Sparkles, Flame, Gift, Star, Route, PartyPopper, QrCode, Search, Bell, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ItineraryBuilder from "../../components/discovery/ItineraryBuilder";
+import TicketQRModal from "../../components/events/TicketQRModal";
 
 const Wallet = () => {
   const { user } = useAuth();
@@ -13,15 +14,114 @@ const Wallet = () => {
   const [tickets, setTickets] = useState([]);
   const [completedTrails, setCompletedTrails] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Interactive Ticket QR inspection state
+  const [selectedTicketForQR, setSelectedTicketForQR] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [checkInNotice, setCheckInNotice] = useState(null);
+  const prevCheckedInIdsRef = useRef(new Set());
 
-  // Fetch user tickets in real-time
+  // Dev mode detection — user.uid starts with "dev-user-"
+  const isDevMode = user?.uid?.startsWith("dev-user-");
+
+  // Fetch user tickets in real-time (or load demo data in dev mode)
   useEffect(() => {
     if (!user) return;
 
+    // Dev mode: generate demo tickets so the wallet is testable without Firebase
+    if (isDevMode) {
+      const now = new Date();
+      const demoTickets = [
+        {
+          id: "demo-ticket-001",
+          userId: user.uid,
+          eventName: "Lagos Jazz Festival 2026",
+          eventDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+          eventCategory: "Music",
+          eventImage: "https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?q=80&w=400&auto=format&fit=crop",
+          ticketCode: "KLT-847291",
+          status: "valid",
+          price: 45.00,
+          quantity: 1,
+          meetupEnabled: true,
+          meetupVenueName: "Café Harmonia",
+          meetupVenueAddress: "12 Akin Adesola, Victoria Island, Lagos",
+          meetupNote: "After the show — live acoustic jam session with the headline performers.",
+          purchaseDate: { seconds: Math.floor(now.getTime() / 1000) - 86400 }
+        },
+        {
+          id: "demo-ticket-002",
+          userId: user.uid,
+          eventName: "Nollywood Night: Heritage Screening",
+          eventDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          eventCategory: "Film",
+          eventImage: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=400&auto=format&fit=crop",
+          ticketCode: "KLT-563014",
+          status: "valid",
+          price: 0,
+          quantity: 2,
+          meetupEnabled: false,
+          purchaseDate: { seconds: Math.floor(now.getTime() / 1000) - 3600 }
+        },
+        {
+          id: "demo-ticket-003",
+          userId: user.uid,
+          eventName: "Afrobeats Under the Stars",
+          eventDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          eventCategory: "Music",
+          eventImage: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=400&auto=format&fit=crop",
+          ticketCode: "KLT-110582",
+          status: "checked-in",
+          price: 30.00,
+          quantity: 1,
+          meetupEnabled: true,
+          meetupVenueName: "Rooftop Lounge",
+          meetupVenueAddress: "42 Admiralty Way, Lekki Phase 1",
+          meetupNote: "DJ afterparty with complimentary local cocktails for all ticket holders.",
+          purchaseDate: { seconds: Math.floor(now.getTime() / 1000) - 172800 }
+        },
+        {
+          id: "demo-ticket-004",
+          userId: user.uid,
+          eventName: "Art Basel × Kultura Pop-Up",
+          eventDate: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+          eventCategory: "Art",
+          eventImage: "https://images.unsplash.com/photo-1578301978693-85fa9fd0c5b5?q=80&w=400&auto=format&fit=crop",
+          ticketCode: "KLT-729438",
+          status: "waitlist",
+          price: 75.00,
+          quantity: 1,
+          meetupEnabled: false,
+          purchaseDate: { seconds: Math.floor(now.getTime() / 1000) - 7200 }
+        }
+      ];
+
+      // Sort by purchase date (newest first)
+      demoTickets.sort((a, b) => (b.purchaseDate?.seconds || 0) - (a.purchaseDate?.seconds || 0));
+
+      // Initialize checked-in IDs for check-in detection
+      demoTickets.forEach((t) => {
+        if (t.status === "checked-in") {
+          prevCheckedInIdsRef.current.add(t.id);
+        }
+      });
+
+      setTickets(demoTickets);
+      setLoading(false);
+      return; // No Firestore listener needed in dev mode
+    }
+
+    // Production mode: real-time Firestore listener
     const ticketsRef = collection(db, "tickets");
     const q = query(ticketsRef, where("userId", "==", user.uid));
 
+    // Safety timeout: if Firestore never responds, stop loading after 4 seconds
+    const safetyTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      clearTimeout(safetyTimeout);
       const fetchedTickets = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data()
@@ -34,19 +134,40 @@ const Wallet = () => {
         return timeB - timeA;
       });
 
+      // Detect real-time gate check-ins to trigger notification banner
+      fetchedTickets.forEach((t) => {
+        if (t.status === "checked-in") {
+          if (prevCheckedInIdsRef.current.size > 0 && !prevCheckedInIdsRef.current.has(t.id)) {
+            setCheckInNotice({
+              eventName: t.eventName,
+              meetupEnabled: t.meetupEnabled,
+              meetupVenueName: t.meetupVenueName
+            });
+          }
+          prevCheckedInIdsRef.current.add(t.id);
+        }
+      });
+
       setTickets(fetchedTickets);
       setLoading(false);
     }, (err) => {
+      clearTimeout(safetyTimeout);
       console.error("Error listening to tickets:", err);
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [user]);
+    return () => {
+      clearTimeout(safetyTimeout);
+      unsubscribe();
+    };
+  }, [user, isDevMode]);
 
   // Fetch completed trails (rewards)
   useEffect(() => {
     if (!user) return;
+
+    // Skip Firestore query in dev mode
+    if (isDevMode) return;
 
     const rewardsRef = collection(db, "users", user.uid, "completedTrails");
     const unsubscribe = onSnapshot(rewardsRef, (snapshot) => {
@@ -69,11 +190,18 @@ const Wallet = () => {
       unsubscribe();
       setCompletedTrails([]);
     };
-  }, [user]);
+  }, [user, isDevMode]);
 
-  // Filter tickets by activeTab
+  // Filter tickets by activeTab and searchQuery
   const getFilteredTickets = () => {
     return tickets.filter((t) => {
+      const matchesSearch = searchQuery.trim() === "" || 
+        t.eventName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.eventCategory?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.ticketCode?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      if (!matchesSearch) return false;
+
       if (activeTab === "active") return t.status === "valid";
       if (activeTab === "waitlist") return t.status === "waitlist";
       if (activeTab === "history") return t.status === "checked-in";
@@ -200,6 +328,38 @@ const Wallet = () => {
           </button>
         </div>
 
+        {/* Real-time Gate Check-In Celebration Notification Banner */}
+        {checkInNotice && (
+          <div className="mb-6 p-4 rounded-3xl bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs flex justify-between items-center shadow-md animate-bounce">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                <PartyPopper size={20} />
+              </div>
+              <div className="text-left">
+                <span className="font-bold text-sm text-emerald-900 block">Gate Pass Stamped! 🎉</span>
+                <span>Checked in for <strong>{checkInNotice.eventName}</strong>. {checkInNotice.meetupEnabled ? `Unlocked Secret After-Party Meetup at ${checkInNotice.meetupVenueName || "Partner Venue"}!` : "Your cultural passport has been stamped."}</span>
+              </div>
+            </div>
+            <button onClick={() => setCheckInNotice(null)} className="p-1.5 rounded-full text-emerald-600 hover:bg-emerald-100/50 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* Quick Search & Filter Bar */}
+        {["active", "waitlist", "history"].includes(activeTab) && (
+          <div className="relative mb-6 max-w-sm text-left">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter passes by event, category, or code..."
+              className="w-full h-11 pl-9 pr-4 rounded-full border border-neutral-200/80 bg-white focus:outline-none focus:ring-2 focus:ring-[#358597]/20 focus:border-[#358597] text-xs text-[#2A2A2A] placeholder-neutral-300 transition-all font-light shadow-sm"
+            />
+          </div>
+        )}
+
         {/* Itinerary Tab — renders independently */}
         {activeTab === "itinerary" ? (
           <ItineraryBuilder tickets={tickets} />
@@ -272,7 +432,8 @@ const Wallet = () => {
               return (
                 <div key={t.id} className="flex flex-col gap-3 h-full">
                   <div 
-                    className={`bg-white rounded-3xl border border-neutral-100 hover:border-neutral-200/80 shadow-xl shadow-neutral-100/40 overflow-hidden flex flex-col sm:flex-row min-h-[180px] transition-all relative ${
+                    onClick={() => setSelectedTicketForQR(t)}
+                    className={`bg-white rounded-3xl border border-neutral-100 hover:border-[#358597]/40 hover:shadow-2xl shadow-xl shadow-neutral-100/40 overflow-hidden flex flex-col sm:flex-row min-h-[180px] transition-all duration-300 relative cursor-pointer group ${
                       t.status === "checked-in" ? "opacity-95" : ""
                     }`}
                   >
@@ -282,7 +443,7 @@ const Wallet = () => {
                       <img 
                         src={t.eventImage || "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=200&auto=format&fit=crop"} 
                         alt={t.eventName} 
-                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-neutral-200/45 shrink-0 select-none align-middle"
+                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-neutral-200/45 shrink-0 select-none align-middle group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
                       />
                       
@@ -307,7 +468,7 @@ const Wallet = () => {
                             )}
                           </div>
 
-                          <h3 className="font-display font-bold text-base text-[#2A2A2A] leading-tight">
+                          <h3 className="font-display font-bold text-base text-[#2A2A2A] leading-tight group-hover:text-[#358597] transition-colors">
                             {t.eventName}
                           </h3>
                           
@@ -334,7 +495,7 @@ const Wallet = () => {
                     </div>
 
                     {/* RIGHT STUB: Barcode / Scan details */}
-                    <div className="p-5 sm:w-44 bg-neutral-50/50 border-t sm:border-t-0 sm:border-l border-neutral-100 flex flex-col justify-between items-center shrink-0">
+                    <div className="p-5 sm:w-44 bg-neutral-50/50 border-t sm:border-t-0 sm:border-l border-neutral-100 flex flex-col justify-between items-center shrink-0 group-hover:bg-[#358597]/5 transition-colors">
                       
                       {t.status === "waitlist" ? (
                         <div className="flex flex-col items-center justify-center flex-grow py-4">
@@ -358,11 +519,15 @@ const Wallet = () => {
 
                       <div className="w-full text-center mt-3 border-t border-neutral-100/80 pt-2 text-[10px] font-sans">
                         {t.status === "checked-in" ? (
-                          <span className="font-semibold text-emerald-600">Checked In</span>
+                          <span className="font-semibold text-emerald-600 flex items-center justify-center gap-1">
+                            <Check size={12} /> Stamped
+                          </span>
                         ) : t.status === "waitlist" ? (
                           <span className="text-amber-600 font-medium">Notify on Open</span>
                         ) : (
-                          <span className="text-[#358597] font-medium">Ready to Scan</span>
+                          <span className="text-[#358597] font-semibold group-hover:underline flex items-center justify-center gap-1">
+                            <QrCode size={12} /> View QR Pass
+                          </span>
                         )}
                       </div>
                     </div>
@@ -518,6 +683,13 @@ const Wallet = () => {
           )
         )}
       </div>
+
+      {/* Ticket Pass inspection & QR Modal */}
+      <TicketQRModal 
+        isOpen={!!selectedTicketForQR} 
+        onClose={() => setSelectedTicketForQR(null)} 
+        ticket={selectedTicketForQR} 
+      />
     </div>
   );
 };

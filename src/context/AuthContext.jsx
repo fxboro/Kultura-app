@@ -18,29 +18,43 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+    const safetyTimeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 1500);
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!mounted) return;
+      clearTimeout(safetyTimeout);
       setUser(currentUser);
       if (currentUser) {
         try {
           const docRef = doc(db, "users", currentUser.uid);
           const docSnap = await getDoc(docRef);
           
-          if (docSnap.exists()) {
+          if (docSnap.exists() && mounted) {
             setProfile(docSnap.data());
-          } else {
+          } else if (mounted) {
             setProfile(null);
           }
         } catch (error) {
           console.error("Error fetching user profile from Firestore:", error);
-          setProfile(null);
+          if (mounted) setProfile(null);
         }
-      } else {
+      } else if (mounted) {
         setProfile(null);
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
+    }, (error) => {
+      console.warn("onAuthStateChanged error:", error);
+      if (mounted) setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(safetyTimeout);
+      unsubscribe();
+    };
   }, []);
 
   const signUp = async (email, password, role, profileData = {}) => {
@@ -89,9 +103,8 @@ export const AuthProvider = ({ children }) => {
 
       setProfile(newProfile);
       return { user: userObj };
-    } catch (error) {
+    } finally {
       setLoading(false);
-      throw error;
     }
   };
 
@@ -119,9 +132,8 @@ export const AuthProvider = ({ children }) => {
           throw authErr;
         }
       }
-    } catch (error) {
+    } finally {
       setLoading(false);
-      throw error;
     }
   };
 
