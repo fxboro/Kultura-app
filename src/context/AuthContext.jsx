@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useRef } from "react";
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -16,6 +16,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const signingUp = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -27,6 +28,13 @@ export const AuthProvider = ({ children }) => {
       if (!mounted) return;
       clearTimeout(safetyTimeout);
       setUser(currentUser);
+
+      // Skip profile fetch while signUp() is in progress — it will
+      // set the profile itself once the Firestore write completes.
+      if (signingUp.current) {
+        return;
+      }
+
       if (currentUser) {
         try {
           const docRef = doc(db, "users", currentUser.uid);
@@ -59,6 +67,7 @@ export const AuthProvider = ({ children }) => {
 
   const signUp = async (email, password, role, profileData = {}) => {
     setLoading(true);
+    signingUp.current = true;
     try {
       let uid;
       let userObj;
@@ -94,16 +103,18 @@ export const AuthProvider = ({ children }) => {
         } : {})
       };
       
-      // Save profile to Firestore (with resilient error catch)
+      // Save profile to Firestore — surface errors so the UI can inform the user
       try {
         await setDoc(doc(db, "users", uid), newProfile);
       } catch (fsError) {
-        console.warn("Firestore profile creation warning (fallback applied):", fsError);
+        console.error("Firestore profile creation failed:", fsError);
+        throw new Error("Account created but profile could not be saved. Please try logging in again.");
       }
 
       setProfile(newProfile);
       return { user: userObj };
     } finally {
+      signingUp.current = false;
       setLoading(false);
     }
   };
