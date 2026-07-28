@@ -834,7 +834,8 @@ const Discover = () => {
                   return (
                     <div 
                       key={event.id}
-                      className="w-[280px] sm:w-[320px] shrink-0 bg-white border border-neutral-100 rounded-3xl overflow-hidden shadow-xl shadow-neutral-100/50 hover:shadow-2xl hover:shadow-neutral-200/50 hover:border-neutral-200/50 transition-all duration-300 snap-start flex flex-col justify-between"
+                      onClick={() => navigate(`/event/${event.id}`, { state: { event } })}
+                      className="w-[280px] sm:w-[320px] shrink-0 bg-white border border-neutral-100 rounded-3xl overflow-hidden shadow-xl shadow-neutral-100/50 hover:shadow-2xl hover:shadow-neutral-200/50 hover:border-neutral-200/50 transition-all duration-300 snap-start flex flex-col justify-between cursor-pointer"
                     >
                       {/* Image container */}
                       <div className="relative h-44 w-full overflow-hidden">
@@ -888,8 +889,11 @@ const Discover = () => {
                           </div>
 
                           <button
-                            onClick={() => handleOpenBooking(event)}
-                            className="h-9 px-4 rounded-full bg-[#2A2A2A] text-white hover:bg-neutral-800 transition-colors text-xs font-semibold tracking-wide uppercase font-display shadow-sm flex items-center gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenBooking(event);
+                            }}
+                            className="h-9 px-4 rounded-full bg-[#2A2A2A] text-[#ffffff] hover:bg-neutral-800 transition-colors text-xs font-semibold tracking-wide uppercase font-display shadow-sm flex items-center gap-1"
                           >
                             Book Spot
                           </button>

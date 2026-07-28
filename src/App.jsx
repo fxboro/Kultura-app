@@ -9,6 +9,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 // Views (Lazy Loaded for performance & code splitting)
 const Discover = lazy(() => import("./views/visitor/Discover"));
+const EventDetail = lazy(() => import("./views/visitor/EventDetail"));
 const Wallet = lazy(() => import("./views/visitor/Wallet"));
 const OrganizerDashboard = lazy(() => import("./views/organizer/Dashboard"));
 const Admin = lazy(() => import("./views/admin/Admin"));
@@ -60,6 +61,7 @@ const AppContent = () => {
         }>
           <Routes>
             <Route path="/" element={<Discover />} />
+            <Route path="/event/:eventId" element={<EventDetail />} />
             <Route 
               path="/wallet" 
               element={

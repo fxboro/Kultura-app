@@ -1,7 +1,9 @@
 import { memo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Calendar, MapPin, Sparkles, Flame, PartyPopper } from "lucide-react";
 
 const EventCard = memo(({ event, onBook }) => {
+  const navigate = useNavigate();
   const { name, date, image, category, vibe, price, inventory, soldCount, isFree, hypeMode, venueName, meetupEnabled } = event;
 
   const capacity = inventory || 100;
@@ -44,7 +46,10 @@ const EventCard = memo(({ event, onBook }) => {
   };
 
   return (
-    <div className="group bg-white rounded-[2rem] border border-neutral-100/80 shadow-xl shadow-neutral-100/40 hover:shadow-2xl hover:shadow-neutral-200/50 overflow-hidden flex flex-col justify-between transition-all duration-300 h-full">
+    <div 
+      onClick={() => navigate(`/event/${event.id}`, { state: { event } })}
+      className="group bg-white rounded-[2rem] border border-neutral-100/80 shadow-xl shadow-neutral-100/40 hover:shadow-2xl hover:shadow-neutral-200/50 overflow-hidden flex flex-col justify-between transition-all duration-300 h-full cursor-pointer"
+    >
       {/* Image Banner Section */}
       <div className="relative h-56 overflow-hidden select-none shrink-0">
         <img 
@@ -143,7 +148,10 @@ const EventCard = memo(({ event, onBook }) => {
 
           {/* CTA Action Button */}
           <button
-            onClick={() => onBook(event)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onBook(event);
+            }}
             disabled={isSoldOut && !hypeMode}
             className={`h-11 px-5 rounded-full font-display text-xs font-semibold tracking-wider uppercase transition-all duration-300 flex-grow text-center flex items-center justify-center ${getButtonStyles()}`}
           >
