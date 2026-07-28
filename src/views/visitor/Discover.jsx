@@ -260,7 +260,7 @@ const DEFAULT_SEED_EVENTS = [
   }
 ];
 
-const Discover = () => {
+const Discover = ({ onOpenAuth }) => {
   const { user } = useAuth();
   const [, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -414,14 +414,9 @@ const Discover = () => {
 
   // Click card button action handler
   const handleOpenBooking = useCallback((event) => {
-    if (!user) {
-      // Trigger App.jsx login modal via query param
-      setSearchParams({ login: "true" });
-    } else {
-      setSelectedEvent(event);
-      setBookingOpen(true);
-    }
-  }, [user, setSearchParams]);
+    setSelectedEvent(event);
+    setBookingOpen(true);
+  }, []);
 
   // Seeder helper to populate database with sample data
   const seedSampleEvents = async () => {
@@ -1120,6 +1115,7 @@ const Discover = () => {
           setSelectedEvent(null);
         }}
         event={selectedEvent}
+        onOpenAuth={onOpenAuth}
         onSuccess={() => {
           // Allow small delay before closing modal
           setTimeout(() => {

@@ -16,11 +16,17 @@ const Admin = lazy(() => import("./views/admin/Admin"));
 
 const AppContent = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const handleOpenAuth = (mode = "login") => {
+    setAuthMode(mode);
+    setAuthModalOpen(true);
+  };
 
   useEffect(() => {
     if (searchParams.get("login") === "true") {
-      setAuthModalOpen(true);
+      handleOpenAuth("login");
       // Remove query param to clean URL
       const newParams = new URLSearchParams(searchParams);
       newParams.delete("login");
@@ -36,7 +42,7 @@ const AppContent = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-[#2A2A2A] font-sans flex flex-col">
-      <Navbar onOpenAuth={() => setAuthModalOpen(true)} />
+      <Navbar onOpenAuth={() => handleOpenAuth("login")} />
       
       {/* Unauthorized Redirection Alert Banner */}
       {searchParams.get("unauthorized") === "true" && (
@@ -60,8 +66,8 @@ const AppContent = () => {
           </div>
         }>
           <Routes>
-            <Route path="/" element={<Discover />} />
-            <Route path="/event/:eventId" element={<EventDetail />} />
+            <Route path="/" element={<Discover onOpenAuth={handleOpenAuth} />} />
+            <Route path="/event/:eventId" element={<EventDetail onOpenAuth={handleOpenAuth} />} />
             <Route 
               path="/wallet" 
               element={
@@ -87,7 +93,7 @@ const AppContent = () => {
               } 
             />
             {/* Fallback back to discover feed */}
-            <Route path="*" element={<Discover />} />
+            <Route path="*" element={<Discover onOpenAuth={handleOpenAuth} />} />
           </Routes>
         </Suspense>
       </main>
@@ -96,13 +102,13 @@ const AppContent = () => {
       <Footer />
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav onOpenAuth={() => setAuthModalOpen(true)} />
+      <MobileBottomNav onOpenAuth={() => handleOpenAuth("login")} />
 
       {/* Global Portal modal */}
       <AuthModal 
         isOpen={authModalOpen} 
         onClose={() => setAuthModalOpen(false)} 
-        defaultMode="login"
+        defaultMode={authMode}
       />
     </div>
   );

@@ -347,7 +347,7 @@ const getPartnerPerks = (event) => {
   return perks;
 };
 
-const EventDetail = () => {
+const EventDetail = ({ onOpenAuth }) => {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -744,6 +744,7 @@ const EventDetail = () => {
         isOpen={bookingOpen}
         onClose={() => setBookingOpen(false)}
         event={event}
+        onOpenAuth={onOpenAuth}
         onSuccess={() => {
           setTimeout(() => {
             setBookingOpen(false);
